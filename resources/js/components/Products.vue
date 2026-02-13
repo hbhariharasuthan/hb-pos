@@ -31,7 +31,7 @@
                         <td>{{ product.name }}</td>
                         <td>{{ product.sku }}</td>
                         <td>{{ product.category?.name || 'N/A' }}</td>
-                        <td>${{ product.selling_price }}</td>
+                        <td>₹{{ product.selling_price }}</td>
                         <td :class="{ 'low-stock': product.stock_quantity <= product.min_stock_level }">
                             {{ product.stock_quantity }} {{ product.unit }}
                         </td>

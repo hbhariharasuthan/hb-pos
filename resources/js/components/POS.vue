@@ -31,7 +31,7 @@
                         <div class="product-info">
                             <h3>{{ product.name }}</h3>
                             <p class="product-sku">SKU: {{ product.sku }}</p>
-                            <p class="product-price">${{ product.selling_price }}</p>
+                            <p class="product-price">₹{{ product.selling_price }}</p>
                             <p class="product-stock">Stock: {{ product.stock_quantity }} {{ product.unit }}</p>
                         </div>
                         <div v-if="product.stock_quantity <= product.min_stock_level" class="low-stock-tooltip">
@@ -53,7 +53,7 @@
                         <div v-for="(item, index) in cart" :key="index" class="cart-item">
                             <div class="item-info">
                                 <h4>{{ item.name }}</h4>
-                                <p>${{ item.price }} × {{ item.quantity }}</p>
+                                <p>₹{{ item.price }} × {{ item.quantity }}</p>
                             </div>
                             <div class="item-actions">
                                 <button @click="updateQuantity(index, item.quantity - 1)" class="btn-qty">-</button>
@@ -68,7 +68,7 @@
                 <div class="cart-summary">
                     <div class="summary-row">
                         <span>Subtotal:</span>
-                        <span>${{ subtotal.toFixed(2) }}</span>
+                        <span>₹{{ subtotal.toFixed(2) }}</span>
                     </div>
                     <div class="summary-row">
                         <label>Tax Rate (%):</label>
@@ -89,7 +89,7 @@
                     </div>
                     <div class="summary-row total">
                         <span>Total:</span>
-                        <span>${{ total.toFixed(2) }}</span>
+                        <span>₹{{ total.toFixed(2) }}</span>
                     </div>
                 </div>
 

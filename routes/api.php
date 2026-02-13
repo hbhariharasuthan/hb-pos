@@ -8,6 +8,7 @@ use App\Http\Controllers\API\POSController;
 use App\Http\Controllers\API\SaleController;
 use App\Http\Controllers\API\StockController;
 use App\Http\Controllers\API\ReturnController;
+use App\Http\Controllers\API\ReportController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -47,4 +48,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Returns
     Route::apiResource('returns', ReturnController::class);
+
+    // Reports
+    Route::get('/reports/dashboard-stats', [ReportController::class, 'dashboardStats']);
+    Route::get('/reports/products', [ReportController::class, 'productReport']);
+    Route::get('/reports/inventory', [ReportController::class, 'inventoryReport']);
+    Route::get('/reports/sales', [ReportController::class, 'salesReport']);
 });

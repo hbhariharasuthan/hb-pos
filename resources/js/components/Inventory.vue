@@ -80,8 +80,8 @@
                             {{ product.stock_quantity }} {{ product.unit }}
                         </td>
                         <td>{{ product.min_stock_level }} {{ product.unit }}</td>
-                        <td>${{ product.cost_price }}</td>
-                        <td>${{ (product.stock_quantity * product.cost_price).toFixed(2) }}</td>
+                        <td>₹{{ product.cost_price }}</td>
+                        <td>₹{{ (product.stock_quantity * product.cost_price).toFixed(2) }}</td>
                         <td>
                             <span :class="getStatusBadge(product)">
                                 {{ getStockStatus(product) }}
@@ -161,7 +161,7 @@
                         <div class="history-quantity" :class="movement.quantity > 0 ? 'positive' : 'negative'">
                             {{ movement.quantity > 0 ? '+' : '' }}{{ movement.quantity }}
                         </div>
-                        <div class="history-cost">${{ movement.unit_cost || 'N/A' }}</div>
+                        <div class="history-cost">₹{{ movement.unit_cost || 'N/A' }}</div>
                         <div class="history-user">{{ movement.user?.name || 'System' }}</div>
                         <div class="history-notes">{{ movement.notes || '-' }}</div>
                     </div>

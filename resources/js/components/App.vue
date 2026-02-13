@@ -12,6 +12,7 @@
                 <router-link to="/inventory">Inventory</router-link>
                 <router-link to="/customers">Customers</router-link>
                 <router-link to="/sales">Sales</router-link>
+                <router-link to="/reports">Reports</router-link>
             </div>
         </nav>
         <router-view />

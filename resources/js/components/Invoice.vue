@@ -44,10 +44,10 @@
                         <tr v-for="item in sale?.items" :key="item.id">
                             <td>{{ item.product?.name }}</td>
                             <td>{{ item.quantity }}</td>
-                            <td>${{ item.unit_price }}</td>
-                            <td>${{ item.discount }}</td>
-                            <td>${{ item.tax_amount }}</td>
-                            <td>${{ item.total }}</td>
+                            <td>₹{{ item.unit_price }}</td>
+                            <td>₹{{ item.discount }}</td>
+                            <td>₹{{ item.tax_amount }}</td>
+                            <td>₹{{ item.total }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -55,19 +55,19 @@
                 <div class="invoice-summary">
                     <div class="summary-row">
                         <span>Subtotal:</span>
-                        <span>${{ sale?.subtotal }}</span>
+                        <span>₹{{ sale?.subtotal }}</span>
                     </div>
                     <div class="summary-row">
                         <span>Tax ({{ sale?.tax_rate }}%):</span>
-                        <span>${{ sale?.tax_amount }}</span>
+                        <span>₹{{ sale?.tax_amount }}</span>
                     </div>
                     <div class="summary-row" v-if="sale?.discount > 0">
                         <span>Discount:</span>
-                        <span>-${{ sale?.discount }}</span>
+                        <span>-₹{{ sale?.discount }}</span>
                     </div>
                     <div class="summary-row total">
                         <span>Total:</span>
-                        <span>${{ sale?.total }}</span>
+                        <span>₹{{ sale?.total }}</span>
                     </div>
                 </div>
 

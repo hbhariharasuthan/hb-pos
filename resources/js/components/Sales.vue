@@ -29,7 +29,7 @@
                         <td>{{ formatDate(sale.sale_date) }}</td>
                         <td>{{ sale.customer?.name || 'Walk-in' }}</td>
                         <td>{{ sale.items?.length || 0 }}</td>
-                        <td>${{ sale.total }}</td>
+                        <td>₹{{ sale.total }}</td>
                         <td>{{ sale.payment_method }}</td>
                         <td>
                             <span :class="getStatusClass(sale.status)">{{ sale.status }}</span>

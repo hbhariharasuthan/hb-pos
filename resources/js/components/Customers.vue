@@ -27,7 +27,7 @@
                         <td>{{ customer.email || 'N/A' }}</td>
                         <td>{{ customer.phone || 'N/A' }}</td>
                         <td>{{ customer.address || 'N/A' }}</td>
-                        <td>${{ customer.balance }}</td>
+                        <td>₹{{ customer.balance }}</td>
                         <td>
                             <button @click="editCustomer(customer)" class="btn-sm btn-primary">Edit</button>
                             <button @click="deleteCustomer(customer.id)" class="btn-sm btn-danger">Delete</button>
