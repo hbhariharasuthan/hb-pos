@@ -1,13 +1,24 @@
 {
+  "node_modules/axios/index.js": {
+    "file": "assets/index-67ef7ed7.js",
+    "imports": [
+      "resources/js/app.js"
+    ],
+    "isDynamicEntry": true,
+    "src": "node_modules/axios/index.js"
+  },
   "resources/js/app.css": {
-    "file": "assets/app-dafcf075.css",
+    "file": "assets/app-25440871.css",
     "src": "resources/js/app.css"
   },
   "resources/js/app.js": {
     "css": [
-      "assets/app-dafcf075.css"
+      "assets/app-25440871.css"
     ],
-    "file": "assets/app-e89cb8ba.js",
+    "dynamicImports": [
+      "node_modules/axios/index.js"
+    ],
+    "file": "assets/app-4dca186d.js",
     "isEntry": true,
     "src": "resources/js/app.js"
   }

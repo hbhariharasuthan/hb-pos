@@ -7,6 +7,7 @@ import Register from './components/Register.vue';
 import Dashboard from './components/Dashboard.vue';
 import POS from './components/POS.vue';
 import Products from './components/Products.vue';
+import Categories from './components/Categories.vue';
 import Customers from './components/Customers.vue';
 import Sales from './components/Sales.vue';
 import Invoice from './components/Invoice.vue';
@@ -21,6 +22,7 @@ const routes = [
     { path: '/dashboard', component: Dashboard, meta: { requiresAuth: true } },
     { path: '/pos', component: POS, meta: { requiresAuth: true } },
     { path: '/products', component: Products, meta: { requiresAuth: true } },
+    { path: '/categories', component: Categories, meta: { requiresAuth: true } },
     { path: '/customers', component: Customers, meta: { requiresAuth: true } },
     { path: '/sales', component: Sales, meta: { requiresAuth: true } },
     { path: '/sales/:id/invoice', component: Invoice, meta: { requiresAuth: true } },

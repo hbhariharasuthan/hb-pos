@@ -9,6 +9,7 @@
                 <router-link to="/dashboard">Dashboard</router-link>
                 <router-link to="/pos">POS</router-link>
                 <router-link to="/products">Products</router-link>
+                <router-link to="/categories">Categories</router-link>
                 <router-link to="/inventory">Inventory</router-link>
                 <router-link to="/customers">Customers</router-link>
                 <router-link to="/sales">Sales</router-link>
@@ -40,6 +41,16 @@ export default {
     async mounted() {
         const { useAuthStore } = await import('../stores/auth');
         const authStore = useAuthStore();
+        
+        // Ensure token is set on axios if it exists
+        if (authStore.token) {
+            const axios = (await import('axios')).default;
+            axios.defaults.headers.common['Authorization'] = `Bearer ${authStore.token}`;
+            if (window.axios) {
+                window.axios.defaults.headers.common['Authorization'] = `Bearer ${authStore.token}`;
+            }
+        }
+        
         await authStore.checkAuth();
     }
 }

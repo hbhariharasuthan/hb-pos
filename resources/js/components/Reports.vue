@@ -310,6 +310,11 @@ export default {
                 productReport.value.products.forEach(p => {
                     csv += `"${p.name}","${p.sku}","${p.category?.name || 'N/A'}","${p.stock_quantity}","${p.cost_price}","${(p.stock_quantity * p.cost_price).toFixed(2)}","${getProductStatus(p)}"\n`;
                 });
+            } else if (reportType.value === 'inventory' && inventoryReport.value) {
+                csv = 'Date,Product,Type,Quantity,Unit Cost,User,Notes\n';
+                inventoryReport.value.movements.forEach(m => {
+                    csv += `"${formatDate(m.created_at)}","${m.product?.name || 'N/A'}","${m.type.toUpperCase()}","${m.quantity}","${m.unit_cost || 'N/A'}","${m.user?.name || 'System'}","${(m.notes || '').replace(/"/g, '""')}"\n`;
+                });
             } else if (reportType.value === 'sales' && salesReport.value) {
                 csv = 'Invoice #,Date,Customer,Items,Subtotal,Tax,Discount,Total,Payment\n';
                 salesReport.value.sales.forEach(s => {
@@ -324,6 +329,10 @@ export default {
                 a.href = url;
                 a.download = `${reportType.value}_report_${new Date().toISOString().split('T')[0]}.csv`;
                 a.click();
+                // Clean up
+                setTimeout(() => window.URL.revokeObjectURL(url), 100);
+            } else {
+                alert('No data available to export');
             }
         };
 

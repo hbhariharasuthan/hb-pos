@@ -9,8 +9,15 @@ use Illuminate\Validation\ValidationException;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        // Check if this is the 'all' route (for master page)
+        if ($request->route()->getName() === 'categories.all') {
+            $categories = Category::withCount('products')->orderBy('name')->get();
+            return response()->json($categories);
+        }
+        
+        // Default: return only active categories (for dropdowns)
         $categories = Category::where('is_active', true)->orderBy('name')->get();
         return response()->json($categories);
     }

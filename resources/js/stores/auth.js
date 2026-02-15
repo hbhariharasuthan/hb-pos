@@ -13,7 +13,12 @@ const authStore = reactive({
         this.token = token;
         this.user = user;
         localStorage.setItem('auth_token', token);
+        // Set token on axios defaults
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        // Also set on window.axios if it exists
+        if (window.axios) {
+            window.axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
     },
     
     clearAuth() {
@@ -21,6 +26,10 @@ const authStore = reactive({
         this.user = null;
         localStorage.removeItem('auth_token');
         delete axios.defaults.headers.common['Authorization'];
+        // Also clear from window.axios if it exists
+        if (window.axios) {
+            delete window.axios.defaults.headers.common['Authorization'];
+        }
     },
     
     async checkAuth() {

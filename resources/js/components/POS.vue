@@ -99,6 +99,107 @@
             </div>
         </div>
 
+        <!-- Thermal Receipt (Hidden, for printing) -->
+        <div v-if="showReceipt && lastSale" style="position: absolute; left: -9999px;">
+            <div id="thermal-receipt-styles">
+                <style>
+                    .thermal-receipt {
+                        width: 80mm;
+                        max-width: 80mm;
+                        margin: 0 auto;
+                        padding: 5mm;
+                        background: white;
+                        font-family: 'Courier New', monospace;
+                        font-size: 12px;
+                        line-height: 1.4;
+                        color: #000;
+                    }
+                    .receipt-header { text-align: center; margin-bottom: 10px; }
+                    .company-name { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+                    .company-address { font-size: 11px; margin-bottom: 3px; }
+                    .company-contact { font-size: 10px; color: #666; }
+                    .receipt-divider { text-align: center; margin: 8px 0; font-size: 11px; }
+                    .receipt-section { margin: 8px 0; }
+                    .receipt-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; }
+                    .receipt-row.total-row { font-weight: bold; font-size: 14px; border-top: 1px dashed #ccc; padding-top: 4px; }
+                    .label { flex: 1; text-align: left; }
+                    .value { flex: 1; text-align: right; font-weight: 500; }
+                    .receipt-item { margin: 6px 0; padding-bottom: 4px; }
+                    .item-name { font-weight: 500; margin-bottom: 2px; font-size: 11px; }
+                    .item-row { display: flex; justify-content: space-between; font-size: 11px; margin-left: 10px; }
+                    .item-discount { font-size: 10px; color: #666; margin-left: 10px; }
+                    .item-qty, .item-price, .item-total { flex: 1; text-align: right; }
+                    .item-qty { text-align: left; }
+                    .receipt-footer { text-align: center; margin-top: 15px; }
+                    .footer-text { font-size: 10px; margin: 4px 0; color: #666; }
+                </style>
+            </div>
+            <div id="thermal-receipt-print" class="thermal-receipt">
+                <div class="receipt-header">
+                    <div class="company-name">HB POS System</div>
+                    <div class="company-address">hbitpartner.com</div>
+                    <div class="company-contact">Your IT Partner</div>
+                </div>
+                <div class="receipt-divider">--------------------------------</div>
+                <div class="receipt-section">
+                    <div class="receipt-row">
+                        <span class="label">Invoice:</span>
+                        <span class="value">{{ lastSale.invoice_number }}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span class="label">Date:</span>
+                        <span class="value">{{ new Date(lastSale.sale_date).toLocaleString('en-IN') }}</span>
+                    </div>
+                    <div class="receipt-row" v-if="lastSale.customer">
+                        <span class="label">Customer:</span>
+                        <span class="value">{{ lastSale.customer.name }}</span>
+                    </div>
+                </div>
+                <div class="receipt-divider">--------------------------------</div>
+                <div class="receipt-section">
+                    <div v-for="item in lastSale.items" :key="item.id" class="receipt-item">
+                        <div class="item-name">{{ item.product?.name || 'N/A' }}</div>
+                        <div class="item-row">
+                            <span class="item-qty">{{ item.quantity }}</span>
+                            <span class="item-price">₹{{ item.unit_price }}</span>
+                            <span class="item-total">₹{{ item.total }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="receipt-divider">--------------------------------</div>
+                <div class="receipt-section">
+                    <div class="receipt-row">
+                        <span class="label">Subtotal:</span>
+                        <span class="value">₹{{ lastSale.subtotal }}</span>
+                    </div>
+                    <div v-if="lastSale.discount > 0" class="receipt-row">
+                        <span class="label">Discount:</span>
+                        <span class="value">-₹{{ lastSale.discount }}</span>
+                    </div>
+                    <div v-if="lastSale.tax_amount > 0" class="receipt-row">
+                        <span class="label">Tax:</span>
+                        <span class="value">₹{{ lastSale.tax_amount }}</span>
+                    </div>
+                    <div class="receipt-row total-row">
+                        <span class="label">TOTAL:</span>
+                        <span class="value">₹{{ lastSale.total }}</span>
+                    </div>
+                </div>
+                <div class="receipt-divider">================================</div>
+                <div class="receipt-section">
+                    <div class="receipt-row">
+                        <span class="label">Payment:</span>
+                        <span class="value">{{ lastSale.payment_method.toUpperCase() }}</span>
+                    </div>
+                </div>
+                <div class="receipt-divider">--------------------------------</div>
+                <div class="receipt-footer">
+                    <div class="footer-text">Thank you for your business!</div>
+                    <div class="footer-text">Visit us at hbitpartner.com</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Customer Modal -->
         <div v-if="showCustomerModal" class="modal-overlay" @click="toggleCustomerModal">
             <div class="modal-content" @click.stop>
@@ -170,6 +271,8 @@ export default {
         const showCustomerModal = ref(false);
         const showAddCustomerForm = ref(false);
         const processing = ref(false);
+        const lastSale = ref(null);
+        const showReceipt = ref(false);
         const newCustomer = ref({
             name: '',
             phone: '',
@@ -274,6 +377,170 @@ export default {
             taxRate.value = 0;
         };
 
+        const printThermalReceipt = (saleData) => {
+            lastSale.value = saleData;
+            
+            // Generate receipt HTML directly
+            const date = new Date(saleData.sale_date).toLocaleString('en-IN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            let itemsHTML = '';
+            saleData.items.forEach(item => {
+                const itemName = (item.product?.name || 'N/A').substring(0, 30);
+                itemsHTML += `
+                    <div style="margin: 6px 0; padding-bottom: 4px; border-bottom: 1px dotted #eee;">
+                        <div style="font-weight: 500; margin-bottom: 2px; font-size: 11px;">${itemName}</div>
+                        <div style="display: flex; justify-content: space-between; margin-left: 10px; font-size: 11px;">
+                            <span>Qty: ${item.quantity}</span>
+                            <span>₹${parseFloat(item.unit_price).toFixed(2)}</span>
+                            <span>₹${parseFloat(item.total).toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const receiptHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Receipt - ${saleData.invoice_number}</title>
+                    <style>
+                        @page {
+                            size: 80mm auto;
+                            margin: 0;
+                        }
+                        body {
+                            margin: 0;
+                            padding: 5mm;
+                            font-family: 'Courier New', monospace;
+                            font-size: 12px;
+                            width: 80mm;
+                            background: white;
+                            color: #000;
+                        }
+                        .header {
+                            text-align: center;
+                            margin-bottom: 10px;
+                        }
+                        .company-name {
+                            font-size: 18px;
+                            font-weight: bold;
+                            margin-bottom: 5px;
+                        }
+                        .company-address {
+                            font-size: 11px;
+                            margin-bottom: 3px;
+                        }
+                        .company-contact {
+                            font-size: 10px;
+                            color: #666;
+                        }
+                        .divider {
+                            text-align: center;
+                            margin: 8px 0;
+                            font-size: 11px;
+                            border-top: 1px dashed #000;
+                            padding-top: 4px;
+                        }
+                        .divider-thick {
+                            text-align: center;
+                            margin: 8px 0;
+                            font-size: 11px;
+                            border-top: 2px solid #000;
+                            padding-top: 4px;
+                        }
+                        .row {
+                            display: flex;
+                            justify-content: space-between;
+                            margin: 4px 0;
+                            font-size: 12px;
+                        }
+                        .total-row {
+                            font-weight: bold;
+                            font-size: 14px;
+                            border-top: 1px dashed #000;
+                            padding-top: 4px;
+                            margin-top: 4px;
+                        }
+                        .footer {
+                            text-align: center;
+                            margin-top: 15px;
+                        }
+                        .footer-text {
+                            font-size: 10px;
+                            margin: 4px 0;
+                            color: #666;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="company-name">HB POS System</div>
+                        <div class="company-address">hbitpartner.com</div>
+                        <div class="company-contact">Your IT Partner</div>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="row">
+                        <span>Invoice:</span>
+                        <span>${saleData.invoice_number}</span>
+                    </div>
+                    <div class="row">
+                        <span>Date:</span>
+                        <span>${date}</span>
+                    </div>
+                    ${saleData.customer ? `<div class="row"><span>Customer:</span><span>${saleData.customer.name}</span></div>` : ''}
+                    <div class="divider"></div>
+                    ${itemsHTML}
+                    <div class="divider"></div>
+                    <div class="row">
+                        <span>Subtotal:</span>
+                        <span>₹${parseFloat(saleData.subtotal).toFixed(2)}</span>
+                    </div>
+                    ${saleData.discount > 0 ? `<div class="row"><span>Discount:</span><span>-₹${parseFloat(saleData.discount).toFixed(2)}</span></div>` : ''}
+                    ${saleData.tax_amount > 0 ? `<div class="row"><span>Tax (${saleData.tax_rate}%):</span><span>₹${parseFloat(saleData.tax_amount).toFixed(2)}</span></div>` : ''}
+                    <div class="row total-row">
+                        <span>TOTAL:</span>
+                        <span>₹${parseFloat(saleData.total).toFixed(2)}</span>
+                    </div>
+                    <div class="divider-thick"></div>
+                    <div class="row">
+                        <span>Payment:</span>
+                        <span>${saleData.payment_method.toUpperCase()}</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="footer">
+                        <div class="footer-text">Thank you for your business!</div>
+                        <div class="footer-text">Visit us at hbitpartner.com</div>
+                    </div>
+                    <div class="divider-thick"></div>
+                    <div style="height: 20mm;"></div>
+                </body>
+                </html>
+            `;
+            
+            // Open print window and trigger print
+            const printWindow = window.open('', '_blank');
+            if (printWindow) {
+                printWindow.document.write(receiptHTML);
+                printWindow.document.close();
+                printWindow.focus();
+                
+                // Trigger print dialog automatically
+                setTimeout(() => {
+                    printWindow.print();
+                    // Keep window open briefly, then close
+                    setTimeout(() => {
+                        printWindow.close();
+                    }, 500);
+                }, 500);
+            }
+        };
+
         const toggleCustomerModal = () => {
             showCustomerModal.value = !showCustomerModal.value;
             if (!showCustomerModal.value) {
@@ -348,12 +615,20 @@ export default {
                     payment_method: paymentMethod.value
                 });
 
-                alert('Sale completed successfully! Invoice: ' + response.data.sale.invoice_number);
+                // Store sale data
+                lastSale.value = response.data.sale;
+                
+                // Clear cart first
                 clearCart();
                 selectedCustomer.value = null;
                 
-                // Optionally redirect to invoice
-                // this.$router.push(`/sales/${response.data.sale.id}/invoice`);
+                // Show success message briefly, then auto-print receipt
+                alert('Sale completed successfully! Invoice: ' + response.data.sale.invoice_number + '\n\nPrinting receipt...');
+                
+                // Automatically trigger thermal receipt print
+                setTimeout(() => {
+                    printThermalReceipt(response.data.sale);
+                }, 300);
             } catch (error) {
                 const message = error.response?.data?.message || 'Error processing sale';
                 const errors = error.response?.data?.errors;
@@ -386,6 +661,8 @@ export default {
             showAddCustomerForm,
             newCustomer,
             processing,
+            lastSale,
+            showReceipt,
             subtotal,
             taxAmount,
             total,
@@ -399,7 +676,10 @@ export default {
             selectCustomer,
             searchAndAddCustomer,
             addNewCustomer,
-            processSale
+            processSale,
+            printThermalReceipt,
+            lastSale,
+            showReceipt
         };
     }
 };

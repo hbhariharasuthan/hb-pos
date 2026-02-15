@@ -2,7 +2,8 @@
     <div class="invoice-container">
         <div class="invoice-actions">
             <button @click="goBack" class="btn btn-secondary">Back</button>
-            <button @click="printInvoice" class="btn btn-primary">Print</button>
+            <button @click="printThermalReceipt" class="btn btn-primary">Print Thermal Receipt</button>
+            <button @click="printInvoice" class="btn btn-secondary">Print Invoice</button>
         </div>
 
         <div id="invoice-content" class="invoice-content">
@@ -115,6 +116,109 @@ export default {
             });
         };
 
+        const printThermalReceipt = () => {
+            if (!sale.value) return;
+            
+            const printWindow = window.open('', '_blank');
+            const receiptHTML = generateThermalReceiptHTML(sale.value);
+            
+            if (printWindow) {
+                printWindow.document.write(receiptHTML);
+                printWindow.document.close();
+                printWindow.focus();
+                setTimeout(() => {
+                    printWindow.print();
+                    printWindow.close();
+                }, 250);
+            }
+        };
+
+        const generateThermalReceiptHTML = (saleData) => {
+            const date = new Date(saleData.sale_date).toLocaleString('en-IN');
+            let itemsHTML = '';
+            saleData.items.forEach(item => {
+                itemsHTML += `
+                    <div style="margin: 6px 0;">
+                        <div style="font-weight: 500; margin-bottom: 2px;">${item.product?.name || 'N/A'}</div>
+                        <div style="display: flex; justify-content: space-between; margin-left: 10px; font-size: 11px;">
+                            <span>Qty: ${item.quantity}</span>
+                            <span>₹${item.unit_price}</span>
+                            <span>₹${item.total}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            return `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Receipt - ${saleData.invoice_number}</title>
+                    <style>
+                        @page {
+                            size: 80mm auto;
+                            margin: 0;
+                        }
+                        body {
+                            margin: 0;
+                            padding: 5mm;
+                            font-family: 'Courier New', monospace;
+                            font-size: 12px;
+                            width: 80mm;
+                            background: white;
+                        }
+                        .header { text-align: center; margin-bottom: 10px; }
+                        .company-name { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+                        .divider { text-align: center; margin: 8px 0; border-top: 1px dashed #000; }
+                        .row { display: flex; justify-content: space-between; margin: 4px 0; }
+                        .total-row { font-weight: bold; font-size: 14px; border-top: 1px dashed #000; padding-top: 4px; }
+                        .footer { text-align: center; margin-top: 15px; font-size: 10px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="company-name">HB POS System</div>
+                        <div style="font-size: 11px;">hbitpartner.com</div>
+                        <div style="font-size: 10px; color: #666;">Your IT Partner</div>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="row">
+                        <span>Invoice:</span>
+                        <span>${saleData.invoice_number}</span>
+                    </div>
+                    <div class="row">
+                        <span>Date:</span>
+                        <span>${date}</span>
+                    </div>
+                    ${saleData.customer ? `<div class="row"><span>Customer:</span><span>${saleData.customer.name}</span></div>` : ''}
+                    <div class="divider"></div>
+                    ${itemsHTML}
+                    <div class="divider"></div>
+                    <div class="row">
+                        <span>Subtotal:</span>
+                        <span>₹${saleData.subtotal}</span>
+                    </div>
+                    ${saleData.discount > 0 ? `<div class="row"><span>Discount:</span><span>-₹${saleData.discount}</span></div>` : ''}
+                    ${saleData.tax_amount > 0 ? `<div class="row"><span>Tax:</span><span>₹${saleData.tax_amount}</span></div>` : ''}
+                    <div class="row total-row">
+                        <span>TOTAL:</span>
+                        <span>₹${saleData.total}</span>
+                    </div>
+                    <div class="divider" style="border-top: 2px solid #000;"></div>
+                    <div class="row">
+                        <span>Payment:</span>
+                        <span>${saleData.payment_method.toUpperCase()}</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="footer">
+                        <div>Thank you for your business!</div>
+                        <div>Visit us at hbitpartner.com</div>
+                    </div>
+                </body>
+                </html>
+            `;
+        };
+
         const printInvoice = () => {
             const printContent = document.getElementById('invoice-content').innerHTML;
             const originalContent = document.body.innerHTML;
@@ -136,6 +240,7 @@ export default {
             sale,
             formatDate,
             printInvoice,
+            printThermalReceipt,
             goBack
         };
     }

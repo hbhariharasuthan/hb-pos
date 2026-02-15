@@ -57,6 +57,12 @@
                 <p>Manage inventory</p>
             </router-link>
 
+            <router-link to="/categories" class="dashboard-card">
+                <div class="card-icon">🏷️</div>
+                <h2>Categories</h2>
+                <p>Manage categories</p>
+            </router-link>
+
             <router-link to="/customers" class="dashboard-card">
                 <div class="card-icon">👥</div>
                 <h2>Customers</h2>
