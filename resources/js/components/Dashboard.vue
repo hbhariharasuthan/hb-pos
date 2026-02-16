@@ -184,67 +184,67 @@ export default {
 
 .report-widgets {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
     padding: 0 20px;
 }
 
 .report-widget {
     background: white;
-    border-radius: 12px;
-    padding: 25px;
+    border-radius: 10px;
+    padding: 16px 18px;
     display: flex;
     align-items: center;
-    gap: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    gap: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     transition: all 0.3s;
 }
 
 .report-widget:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
 .widget-icon {
-    font-size: 48px;
+    font-size: 36px;
 }
 
 .widget-content h3 {
-    margin: 0 0 10px 0;
-    font-size: 14px;
+    margin: 0 0 6px 0;
+    font-size: 12px;
     color: #666;
     font-weight: 500;
 }
 
 .widget-value {
-    margin: 0 0 5px 0;
-    font-size: 28px;
+    margin: 0 0 4px 0;
+    font-size: 22px;
     font-weight: bold;
     color: #333;
 }
 
 .widget-label {
     margin: 0;
-    font-size: 12px;
+    font-size: 11px;
     color: #999;
 }
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 25px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
     width: 100%;
     padding: 0 20px;
 }
 
 .dashboard-card {
     background: white;
-    border-radius: 12px;
-    padding: 30px;
+    border-radius: 10px;
+    padding: 18px 16px;
     text-decoration: none;
     color: inherit;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     transition: all 0.3s;
     display: flex;
     flex-direction: column;
@@ -253,25 +253,26 @@ export default {
 }
 
 .dashboard-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(102, 126, 234, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(102, 126, 234, 0.25);
 }
 
 .card-icon {
-    font-size: 48px;
-    margin-bottom: 15px;
+    font-size: 36px;
+    margin-bottom: 10px;
 }
 
 .dashboard-card h2 {
-    margin: 0 0 10px 0;
+    margin: 0 0 6px 0;
     color: #333;
-    font-size: 24px;
+    font-size: 18px;
 }
 
 .dashboard-card p {
     margin: 0;
     color: #666;
-    font-size: 14px;
+    font-size: 12px;
+    line-height: 1.3;
 }
 
 .btn {
