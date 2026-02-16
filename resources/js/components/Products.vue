@@ -33,7 +33,7 @@
                         <td>{{ product.category?.name || 'N/A' }}</td>
                         <td>₹{{ product.selling_price }}</td>
                         <td :class="{ 'low-stock': product.stock_quantity <= product.min_stock_level }">
-                            {{ product.stock_quantity }} {{ product.unit }}
+                            {{ formatQty(product.stock_quantity, product.unit) }}
                         </td>
                         <td>
                             <span :class="product.is_active ? 'badge-success' : 'badge-danger'">
@@ -69,6 +69,17 @@
                             <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Unit</label>
+                        <select v-model="form.unit">
+                            <option value="pcs">pcs (pieces)</option>
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="box">box</option>
+                            <option value="meter">meter</option>
+                            <option value="ltr">ltr</option>
+                        </select>
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>Cost Price *</label>
@@ -82,11 +93,11 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Stock Quantity</label>
-                            <input v-model.number="form.stock_quantity" type="number" />
+                            <input v-model.number="form.stock_quantity" type="number" :step="isWeightUnit(form.unit) ? 0.001 : 1" min="0" />
                         </div>
                         <div class="form-group">
                             <label>Min Stock Level</label>
-                            <input v-model.number="form.min_stock_level" type="number" />
+                            <input v-model.number="form.min_stock_level" type="number" :step="isWeightUnit(form.unit) ? 0.001 : 1" min="0" />
                         </div>
                     </div>
                     <div class="form-actions">
@@ -188,6 +199,19 @@ export default {
             }
         };
 
+        const isWeightUnit = (unit) => {
+            const u = (unit || '').toLowerCase();
+            return ['kg', 'g', 'gm', 'gram', 'grams', 'ltr'].includes(u);
+        };
+
+        const formatQty = (qty, unit) => {
+            if (qty === null || qty === undefined) return '0';
+            const u = (unit || 'pcs').toLowerCase();
+            const n = parseFloat(qty);
+            if (isWeightUnit(u)) return Number(n) === parseInt(n, 10) ? n + ' ' + u : parseFloat(n).toFixed(3) + ' ' + u;
+            return parseInt(n, 10) + ' ' + u;
+        };
+
         const resetForm = () => {
             form.value = {
                 name: '',
@@ -219,7 +243,9 @@ export default {
             filteredProducts,
             editProduct,
             saveProduct,
-            deleteProduct
+            deleteProduct,
+            isWeightUnit,
+            formatQty
         };
     }
 };

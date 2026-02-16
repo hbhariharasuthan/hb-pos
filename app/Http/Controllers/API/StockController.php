@@ -32,7 +32,7 @@ class StockController extends Controller
         try {
             $validated = $request->validate([
                 'product_id' => 'required|exists:products,id',
-                'quantity' => 'required|integer',
+                'quantity' => 'required|numeric',
                 'type' => 'required|in:purchase,adjustment',
                 'unit_cost' => 'nullable|numeric|min:0',
                 'notes' => 'nullable|string',

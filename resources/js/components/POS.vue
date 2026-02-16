@@ -32,7 +32,7 @@
                             <h3>{{ product.name }}</h3>
                             <p class="product-sku">SKU: {{ product.sku }}</p>
                             <p class="product-price">₹{{ product.selling_price }}</p>
-                            <p class="product-stock">Stock: {{ product.stock_quantity }} {{ product.unit }}</p>
+                            <p class="product-stock">Stock: {{ formatQty(product.stock_quantity, product.unit) }}</p>
                         </div>
                         <div v-if="product.stock_quantity <= product.min_stock_level" class="low-stock-tooltip">
                             ⚠️ Low Stock Alert<br>
@@ -53,12 +53,19 @@
                         <div v-for="(item, index) in cart" :key="index" class="cart-item">
                             <div class="item-info">
                                 <h4>{{ item.name }}</h4>
-                                <p>₹{{ item.price }} × {{ item.quantity }}</p>
+                                <p>₹{{ item.price }} × {{ formatCartQty(item.quantity, item.unit) }} {{ item.unit || 'pcs' }}</p>
                             </div>
                             <div class="item-actions">
-                                <button @click="updateQuantity(index, item.quantity - 1)" class="btn-qty">-</button>
-                                <span class="qty">{{ item.quantity }}</span>
-                                <button @click="updateQuantity(index, item.quantity + 1)" class="btn-qty">+</button>
+                                <button @click="updateQuantity(index, item.quantity - qtyStep(item.unit))" class="btn-qty">-</button>
+                                <input
+                                    v-model.number="item.quantity"
+                                    type="number"
+                                    :step="qtyStep(item.unit)"
+                                    :min="qtyStep(item.unit)"
+                                    class="qty-input"
+                                    @change="validateCartQty(index)"
+                                />
+                                <button @click="updateQuantity(index, item.quantity + qtyStep(item.unit))" class="btn-qty">+</button>
                                 <button @click="removeFromCart(index)" class="btn-remove">×</button>
                             </div>
                         </div>
@@ -160,7 +167,7 @@
                     <div v-for="item in lastSale.items" :key="item.id" class="receipt-item">
                         <div class="item-name">{{ item.product?.name || 'N/A' }}</div>
                         <div class="item-row">
-                            <span class="item-qty">{{ item.quantity }}</span>
+                            <span class="item-qty">{{ formatCartQty(item.quantity, item.product?.unit) }} {{ item.product?.unit || 'pcs' }}</span>
                             <span class="item-price">₹{{ item.unit_price }}</span>
                             <span class="item-total">₹{{ item.total }}</span>
                         </div>
@@ -330,41 +337,81 @@ export default {
             }
         };
 
+        const isWeightUnit = (unit) => {
+            const u = (unit || 'pcs').toLowerCase();
+            return ['kg', 'g', 'gm', 'gram', 'ltr'].includes(u);
+        };
+
+        const qtyStep = (unit) => isWeightUnit(unit) ? 0.5 : 1;
+
+        const formatQty = (qty, unit) => {
+            if (qty === null || qty === undefined) return '0';
+            const n = parseFloat(qty);
+            const u = (unit || 'pcs').toLowerCase();
+            if (isWeightUnit(u)) return Number(n) === parseInt(n, 10) ? n : parseFloat(n).toFixed(2);
+            return parseInt(n, 10);
+        };
+
+        const formatCartQty = (qty, unit) => {
+            if (qty === null || qty === undefined) return '0';
+            const n = parseFloat(qty);
+            const u = (unit || 'pcs').toLowerCase();
+            if (isWeightUnit(u)) return Number(n) === parseInt(n, 10) ? n : parseFloat(n).toFixed(2);
+            return parseInt(n, 10);
+        };
+
         const addToCart = (product) => {
-            if (product.stock_quantity <= 0) {
+            const stock = parseFloat(product.stock_quantity);
+            if (stock <= 0) {
                 alert('Product out of stock');
                 return;
             }
+            const unit = product.unit || 'pcs';
+            const step = qtyStep(unit);
 
             const existingItem = cart.value.find(item => item.id === product.id);
             if (existingItem) {
-                if (existingItem.quantity < product.stock_quantity) {
-                    existingItem.quantity++;
+                const newQty = parseFloat(existingItem.quantity) + step;
+                if (newQty <= stock) {
+                    existingItem.quantity = isWeightUnit(unit) ? parseFloat(newQty.toFixed(3)) : Math.floor(newQty);
                 } else {
-                    alert('Insufficient stock');
+                    alert('Insufficient stock. Available: ' + formatQty(stock, unit) + ' ' + unit);
                 }
             } else {
+                const startQty = isWeightUnit(unit) ? 0.5 : 1;
                 cart.value.push({
                     id: product.id,
                     name: product.name,
-                    price: product.selling_price,
-                    quantity: 1,
+                    price: parseFloat(product.selling_price),
+                    quantity: startQty,
+                    unit: unit,
                     product: product
                 });
             }
         };
 
+        const validateCartQty = (index) => {
+            const item = cart.value[index];
+            const stock = parseFloat(item.product.stock_quantity);
+            let qty = parseFloat(item.quantity);
+            if (isNaN(qty) || qty < 0) qty = qtyStep(item.unit);
+            if (qty > stock) qty = stock;
+            item.quantity = isWeightUnit(item.unit) ? parseFloat(qty.toFixed(3)) : Math.floor(qty);
+        };
+
         const updateQuantity = (index, newQuantity) => {
             const item = cart.value[index];
-            if (newQuantity <= 0) {
+            const step = qtyStep(item.unit);
+            if (newQuantity < step) {
                 removeFromCart(index);
                 return;
             }
-            if (newQuantity > item.product.stock_quantity) {
-                alert('Insufficient stock');
+            const stock = parseFloat(item.product.stock_quantity);
+            if (newQuantity > stock) {
+                alert('Insufficient stock. Available: ' + formatQty(stock, item.unit) + ' ' + item.unit);
                 return;
             }
-            item.quantity = newQuantity;
+            item.quantity = isWeightUnit(item.unit) ? parseFloat(Number(newQuantity).toFixed(3)) : Math.floor(newQuantity);
         };
 
         const removeFromCart = (index) => {
@@ -392,11 +439,16 @@ export default {
             let itemsHTML = '';
             saleData.items.forEach(item => {
                 const itemName = (item.product?.name || 'N/A').substring(0, 30);
+                const u = (item.product?.unit || 'pcs').toLowerCase();
+                const isWeight = ['kg', 'g', 'gm', 'ltr'].includes(u);
+                const qtyStr = isWeight && Number(item.quantity) !== parseInt(item.quantity, 10)
+                    ? parseFloat(item.quantity).toFixed(2) + ' ' + u
+                    : item.quantity + ' ' + u;
                 itemsHTML += `
                     <div style="margin: 6px 0; padding-bottom: 4px; border-bottom: 1px dotted #eee;">
                         <div style="font-weight: 500; margin-bottom: 2px; font-size: 11px;">${itemName}</div>
                         <div style="display: flex; justify-content: space-between; margin-left: 10px; font-size: 11px;">
-                            <span>Qty: ${item.quantity}</span>
+                            <span>Qty: ${qtyStr}</span>
                             <span>₹${parseFloat(item.unit_price).toFixed(2)}</span>
                             <span>₹${parseFloat(item.total).toFixed(2)}</span>
                         </div>
@@ -671,7 +723,12 @@ export default {
             addToCart,
             updateQuantity,
             removeFromCart,
+            validateCartQty,
             clearCart,
+            formatQty,
+            formatCartQty,
+            qtyStep,
+            isWeightUnit,
             toggleCustomerModal,
             selectCustomer,
             searchAndAddCustomer,
@@ -889,9 +946,15 @@ export default {
     cursor: pointer;
 }
 
-.qty {
-    min-width: 30px;
+.qty,
+.qty-input {
+    min-width: 44px;
+    width: 50px;
     text-align: center;
+    padding: 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
 }
 
 .btn-remove {

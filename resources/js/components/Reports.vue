@@ -98,7 +98,7 @@
                             <td>{{ product.name }}</td>
                             <td>{{ product.sku }}</td>
                             <td>{{ product.category?.name || 'N/A' }}</td>
-                            <td>{{ product.stock_quantity }} {{ product.unit }}</td>
+                            <td>{{ formatReportQty(product.stock_quantity, product.unit) }}</td>
                             <td>₹{{ product.cost_price }}</td>
                             <td>₹{{ (product.stock_quantity * product.cost_price).toFixed(2) }}</td>
                             <td>
@@ -362,6 +362,15 @@ export default {
             return new Date(date).toLocaleDateString();
         };
 
+        const formatReportQty = (qty, unit) => {
+            if (qty === null || qty === undefined) return '0';
+            const n = parseFloat(qty);
+            const u = (unit || 'pcs').toLowerCase();
+            const isWeight = ['kg', 'g', 'gm', 'ltr'].includes(u);
+            if (isWeight) return Number(n) === parseInt(n, 10) ? n + ' ' + u : parseFloat(n).toFixed(3) + ' ' + u;
+            return parseInt(n, 10) + ' ' + u;
+        };
+
         onMounted(() => {
             loadReport();
         });
@@ -378,7 +387,8 @@ export default {
             getProductStatus,
             getProductStatusClass,
             getMovementTypeClass,
-            formatDate
+            formatDate,
+            formatReportQty
         };
     }
 };

@@ -13,7 +13,7 @@ class ReturnItem extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'integer',
+        'quantity' => 'decimal:3',
         'unit_price' => 'decimal:2',
         'refund_amount' => 'decimal:2',
     ];

@@ -14,7 +14,7 @@ class StockMovement extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'integer',
+        'quantity' => 'decimal:3',
         'unit_cost' => 'decimal:2',
     ];
 

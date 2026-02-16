@@ -44,7 +44,7 @@
                     <tbody>
                         <tr v-for="item in sale?.items" :key="item.id">
                             <td>{{ item.product?.name }}</td>
-                            <td>{{ item.quantity }}</td>
+                            <td>{{ formatItemQty(item.quantity, item.product?.unit) }} {{ item.product?.unit || 'pcs' }}</td>
                             <td>₹{{ item.unit_price }}</td>
                             <td>₹{{ item.discount }}</td>
                             <td>₹{{ item.tax_amount }}</td>
@@ -116,6 +116,15 @@ export default {
             });
         };
 
+        const formatItemQty = (qty, unit) => {
+            if (qty === null || qty === undefined) return '0';
+            const n = parseFloat(qty);
+            const u = (unit || 'pcs').toLowerCase();
+            const isWeight = ['kg', 'g', 'gm', 'ltr'].includes(u);
+            if (isWeight) return Number(n) === parseInt(n, 10) ? n : parseFloat(n).toFixed(2);
+            return parseInt(n, 10);
+        };
+
         const printThermalReceipt = () => {
             if (!sale.value) return;
             
@@ -137,11 +146,16 @@ export default {
             const date = new Date(saleData.sale_date).toLocaleString('en-IN');
             let itemsHTML = '';
             saleData.items.forEach(item => {
+                const u = (item.product?.unit || 'pcs').toLowerCase();
+                const isWeight = ['kg', 'g', 'gm', 'ltr'].includes(u);
+                const qtyStr = isWeight && Number(item.quantity) !== parseInt(item.quantity, 10)
+                    ? parseFloat(item.quantity).toFixed(2) + ' ' + u
+                    : item.quantity + ' ' + u;
                 itemsHTML += `
                     <div style="margin: 6px 0;">
                         <div style="font-weight: 500; margin-bottom: 2px;">${item.product?.name || 'N/A'}</div>
                         <div style="display: flex; justify-content: space-between; margin-left: 10px; font-size: 11px;">
-                            <span>Qty: ${item.quantity}</span>
+                            <span>Qty: ${qtyStr}</span>
                             <span>₹${item.unit_price}</span>
                             <span>₹${item.total}</span>
                         </div>
@@ -239,6 +253,7 @@ export default {
         return {
             sale,
             formatDate,
+            formatItemQty,
             printInvoice,
             printThermalReceipt,
             goBack

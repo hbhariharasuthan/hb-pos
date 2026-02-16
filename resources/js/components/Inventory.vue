@@ -77,9 +77,9 @@
                         <td>{{ product.sku }}</td>
                         <td>{{ product.category?.name || 'N/A' }}</td>
                         <td :class="getStockClass(product)">
-                            {{ product.stock_quantity }} {{ product.unit }}
+                            {{ formatQty(product.stock_quantity, product.unit) }}
                         </td>
-                        <td>{{ product.min_stock_level }} {{ product.unit }}</td>
+                        <td>{{ formatQty(product.min_stock_level, product.unit) }}</td>
                         <td>₹{{ product.cost_price }}</td>
                         <td>₹{{ (product.stock_quantity * product.cost_price).toFixed(2) }}</td>
                         <td>
@@ -109,8 +109,8 @@
                         </select>
                     </div>
                     <div v-if="selectedProduct" class="product-info-box">
-                        <p><strong>Current Stock:</strong> {{ selectedProduct.stock_quantity }} {{ selectedProduct.unit }}</p>
-                        <p><strong>Min Level:</strong> {{ selectedProduct.min_stock_level }} {{ selectedProduct.unit }}</p>
+                        <p><strong>Current Stock:</strong> {{ formatQty(selectedProduct.stock_quantity, selectedProduct.unit) }} {{ selectedProduct.unit }}</p>
+                        <p><strong>Min Level:</strong> {{ formatQty(selectedProduct.min_stock_level, selectedProduct.unit) }} {{ selectedProduct.unit }}</p>
                     </div>
                     <div class="form-group">
                         <label>Adjustment Type *</label>
@@ -124,9 +124,11 @@
                         <input 
                             v-model.number="adjustForm.quantity" 
                             type="number" 
+                            :step="selectedProduct && isWeightUnit(selectedProduct.unit) ? 0.001 : 1"
                             :placeholder="adjustForm.type === 'purchase' ? 'Enter quantity to add' : 'Enter adjustment amount (+/-)'"
                             required 
                         />
+                        <small v-if="selectedProduct">Unit: {{ selectedProduct.unit || 'pcs' }}</small>
                         <small v-if="adjustForm.type === 'adjustment'">
                             Use positive number to add, negative to subtract
                         </small>
@@ -159,7 +161,7 @@
                             {{ movement.type.toUpperCase() }}
                         </div>
                         <div class="history-quantity" :class="movement.quantity > 0 ? 'positive' : 'negative'">
-                            {{ movement.quantity > 0 ? '+' : '' }}{{ movement.quantity }}
+                            {{ movement.quantity > 0 ? '+' : '' }}{{ formatQty(Math.abs(movement.quantity), movement.product?.unit) }} {{ movement.product?.unit || '' }}
                         </div>
                         <div class="history-cost">₹{{ movement.unit_cost || 'N/A' }}</div>
                         <div class="history-user">{{ movement.user?.name || 'System' }}</div>
@@ -366,21 +368,41 @@ export default {
             };
         };
 
+        const isWeightUnit = (unit) => {
+            const u = (unit || 'pcs').toLowerCase();
+            return ['kg', 'g', 'gm', 'ltr'].includes(u);
+        };
+
+        const formatQty = (qty, unit) => {
+            if (qty === null || qty === undefined) return '0';
+            const n = parseFloat(qty);
+            const u = (unit || 'pcs').toLowerCase();
+            const isWeight = isWeightUnit(u);
+            if (isWeight) return Number(n) === parseInt(n, 10) ? n + ' ' + u : parseFloat(n).toFixed(3) + ' ' + u;
+            return parseInt(n, 10) + ' ' + u;
+        };
+
         const getStockClass = (product) => {
-            if (product.stock_quantity === 0) return 'stock-out';
-            if (product.stock_quantity <= product.min_stock_level) return 'stock-low';
+            const q = parseFloat(product.stock_quantity);
+            const min = parseFloat(product.min_stock_level);
+            if (q === 0) return 'stock-out';
+            if (q <= min) return 'stock-low';
             return 'stock-ok';
         };
 
         const getStockStatus = (product) => {
-            if (product.stock_quantity === 0) return 'Out of Stock';
-            if (product.stock_quantity <= product.min_stock_level) return 'Low Stock';
+            const q = parseFloat(product.stock_quantity);
+            const min = parseFloat(product.min_stock_level);
+            if (q === 0) return 'Out of Stock';
+            if (q <= min) return 'Low Stock';
             return 'In Stock';
         };
 
         const getStatusBadge = (product) => {
-            if (product.stock_quantity === 0) return 'badge-danger';
-            if (product.stock_quantity <= product.min_stock_level) return 'badge-warning';
+            const q = parseFloat(product.stock_quantity);
+            const min = parseFloat(product.min_stock_level);
+            if (q === 0) return 'badge-danger';
+            if (q <= min) return 'badge-warning';
             return 'badge-success';
         };
 
@@ -429,7 +451,9 @@ export default {
             getStockStatus,
             getStatusBadge,
             getMovementTypeClass,
-            formatDate
+            formatDate,
+            formatQty,
+            isWeightUnit
         };
     }
 };

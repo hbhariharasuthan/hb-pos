@@ -17,10 +17,17 @@ class Product extends Model
     protected $casts = [
         'cost_price' => 'decimal:2',
         'selling_price' => 'decimal:2',
-        'stock_quantity' => 'integer',
-        'min_stock_level' => 'integer',
+        'stock_quantity' => 'decimal:3',
+        'min_stock_level' => 'decimal:3',
         'is_active' => 'boolean',
     ];
+
+    /** Whether quantity is in weight (kg/g) and allows decimals */
+    public function isWeightUnit(): bool
+    {
+        $u = strtolower($this->unit ?? 'pcs');
+        return in_array($u, ['kg', 'g', 'gm', 'gram', 'grams', 'kilogram', 'kilograms'], true);
+    }
 
     public function category(): BelongsTo
     {
