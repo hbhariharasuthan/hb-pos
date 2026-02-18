@@ -88,7 +88,7 @@
                             </span>
                         </td>
                         <td>
-                            <button @click="adjustStock(product)" class="btn-sm btn-primary">Adjust</button>
+                            <!--button @click="adjustStock(product)" class="btn-sm btn-primary">Adjust</button -->
                             <button @click="viewHistory(product)" class="btn-sm btn-info">History</button>
                         </td>
                     </tr>
