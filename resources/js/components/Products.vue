@@ -77,10 +77,14 @@
                     </div>
                     <div class="form-group">
                         <label>Category</label>
-                        <select v-model="form.category_id">
-                            <option value="">Select Category</option>
-                            <option v-for="cat in (categories || []).filter(c => c != null && c.id != null)" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-                        </select>
+                        <PaginatedDropdown
+                            v-model="form.category_id"
+                            endpoint="/api/categories"
+                            value-key="id"
+                            label-key="name"
+                            placeholder="Select Category"
+                            emit-full-item
+                        />
                     </div>
                     <div class="form-group">
                         <label>Unit</label>
@@ -127,9 +131,13 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
+import PaginatedDropdown from '../components/PaginatedDropdown.vue';
 
 export default {
     name: 'Products',
+     components: {
+     PaginatedDropdown
+     },
     setup() {
         const categories = ref([]);
         const search = ref('');
@@ -180,7 +188,7 @@ export default {
 
         const loadCategories = async () => {
             try {
-                const response = await axios.get('/api/categories/all');
+                const response = await axios.get('/api/categories');
                 const data = response.data.data || response.data;
                 // Filter out null/undefined items to prevent errors
                 categories.value = Array.isArray(data) 

@@ -55,10 +55,14 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Supplier (Customer)</label>
-                            <select v-model="form.supplier_id" class="form-input">
-                                <option value="">Select supplier</option>
-                                <option v-for="c in suppliers" :key="c.id" :value="c.id">{{ c.name }} {{ c.phone ? ' – ' + c.phone : '' }}</option>
-                            </select>
+                            <PaginatedDropdown
+                                v-model="form.supplier_id"
+                                endpoint="/api/customers"
+                                value-key="id"
+                                label-key="name"
+                                secondary-label-key="phone"
+                                placeholder="Select Supplier"
+                            />
                         </div>
                         <div class="form-group">
                             <label>Purchase Date *</label>
