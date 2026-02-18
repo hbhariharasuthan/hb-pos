@@ -9,7 +9,7 @@
             <input v-model="search" type="text" placeholder="Search customers..." class="search-input" />
         </div>
 
-        <div class="table-container">
+        <div ref="tableContainer" class="table-container" @scroll="handleScroll">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -35,6 +35,19 @@
                     </tr>
                 </tbody>
             </table>
+            <div 
+                ref="loadMoreTrigger"
+                v-if="hasMore"
+                class="load-more-trigger"
+            >
+                <div v-if="loading" class="loading-indicator">
+                    Loading more customers...
+                </div>
+                <div v-else class="load-more-hint">Scroll for more</div>
+            </div>
+            <div v-if="!hasMore && filteredCustomers.length > 0" class="no-more-indicator">
+                No more customers to load
+            </div>
         </div>
 
         <!-- Customer Modal -->
@@ -85,13 +98,13 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 
 export default {
     name: 'Customers',
     setup() {
-        const customers = ref([]);
         const search = ref('');
         const showModal = ref(false);
         const editingCustomer = ref(null);
@@ -108,22 +121,72 @@ export default {
             is_active: true
         });
 
-        const filteredCustomers = computed(() => {
-            if (!search.value) return customers.value;
-            const s = search.value.toLowerCase();
-            return customers.value.filter(c => 
-                c.name.toLowerCase().includes(s) ||
-                (c.email && c.email.toLowerCase().includes(s)) ||
-                (c.phone && c.phone.includes(s))
-            );
+        // Use paginated dropdown composable
+        const {
+            items: customers,
+            loading,
+            hasMore,
+            loadInitial,
+            loadMore,
+            search: searchCustomers
+        } = usePaginatedDropdown('/api/customers', {
+            searchParam: 'search',
+            initialFilters: {},
+            perPage: 10
         });
 
-        const loadCustomers = async () => {
-            try {
-                const response = await axios.get('/api/customers', { params: { per_page: 1000 } });
-                customers.value = response.data.data || response.data;
-            } catch (error) {
-                console.error('Error loading customers:', error);
+        // Watch for search changes
+        watch(search, (newValue) => {
+            searchCustomers(newValue);
+        });
+
+        const filteredCustomers = computed(() => {
+            // Filter out null/undefined items to prevent errors
+            return (customers.value || []).filter(customer => customer != null && customer.id != null);
+        });
+
+        // Intersection Observer for infinite scroll
+        const scrollObserver = ref(null);
+        const loadMoreTrigger = ref(null);
+        const tableContainer = ref(null);
+
+        // Setup intersection observer for infinite scroll
+        const setupScrollObserver = () => {
+            if (typeof IntersectionObserver === 'undefined') {
+                // Fallback to scroll event for older browsers
+                return;
+            }
+
+            if (!tableContainer.value || !loadMoreTrigger.value) {
+                return;
+            }
+
+            scrollObserver.value = new IntersectionObserver(
+                (entries) => {
+                    const entry = entries[0];
+                    if (entry.isIntersecting && hasMore.value && !loading.value) {
+                        loadMore();
+                    }
+                },
+                {
+                    root: tableContainer.value, // Use scrollable container as root
+                    rootMargin: '50px', // Trigger 50px before reaching the bottom
+                    threshold: 0.1
+                }
+            );
+
+            // Observe the trigger element
+            scrollObserver.value.observe(loadMoreTrigger.value);
+        };
+
+        // Fallback scroll handler for older browsers
+        const handleScroll = (event) => {
+            const element = event.target;
+            const scrollBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
+            
+            // Load more when within 100px of bottom
+            if (scrollBottom < 100 && hasMore.value && !loading.value) {
+                loadMore();
             }
         };
 
@@ -140,7 +203,7 @@ export default {
                 } else {
                     await axios.post('/api/customers', form.value);
                 }
-                await loadCustomers();
+                loadInitial(); // Reload from page 1
                 showModal.value = false;
                 resetForm();
             } catch (error) {
@@ -152,7 +215,7 @@ export default {
             if (!confirm('Are you sure you want to delete this customer?')) return;
             try {
                 await axios.delete(`/api/customers/${id}`);
-                await loadCustomers();
+                loadInitial(); // Reload from page 1
             } catch (error) {
                 alert(error.response?.data?.message || 'Error deleting customer');
             }
@@ -175,7 +238,18 @@ export default {
         };
 
         onMounted(() => {
-            loadCustomers();
+            loadInitial();
+            // Setup scroll observer after DOM is ready
+            setTimeout(() => {
+                setupScrollObserver();
+            }, 100);
+        });
+
+        // Watch for loadMoreTrigger element and setup observer
+        watch([loadMoreTrigger, tableContainer], () => {
+            if (loadMoreTrigger.value && tableContainer.value) {
+                setupScrollObserver();
+            }
         });
 
         return {
@@ -185,6 +259,12 @@ export default {
             editingCustomer,
             form,
             filteredCustomers,
+            loading,
+            hasMore,
+            handleScroll,
+            tableContainer,
+            loadMoreTrigger,
+            loadMore,
             editCustomer,
             saveCustomer,
             deleteCustomer
@@ -220,7 +300,32 @@ export default {
 .table-container {
     background: white;
     border-radius: 8px;
-    overflow: hidden;
+    overflow-y: auto;
+    max-height: calc(100vh - 250px);
+}
+
+.load-more-trigger {
+    min-height: 50px;
+    padding: 15px;
+    text-align: center;
+}
+
+.loading-indicator,
+.no-more-indicator,
+.load-more-hint {
+    padding: 15px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+
+.loading-indicator {
+    color: #667eea;
+}
+
+.load-more-hint {
+    color: #999;
+    font-size: 12px;
 }
 
 .data-table {

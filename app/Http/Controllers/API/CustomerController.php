@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\API\Traits\HasDropdownPagination;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class CustomerController extends Controller
 {
+    use HasDropdownPagination;
+
     public function index(Request $request)
     {
         $query = Customer::query();
@@ -22,8 +25,11 @@ class CustomerController extends Controller
             });
         }
 
-        $customers = $query->orderBy('name')->paginate($request->per_page ?? 15);
-        return response()->json($customers);
+        $query->orderBy('name');
+        
+        // Always paginate - default to 10 items per page if not specified
+        $perPage = $request->input('per_page', 10);
+        return response()->json($query->paginate($perPage));
     }
 
     public function store(Request $request)

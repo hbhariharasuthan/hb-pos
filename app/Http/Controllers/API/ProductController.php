@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\API\Traits\HasDropdownPagination;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
+    use HasDropdownPagination;
+
     public function index(Request $request)
     {
         $query = Product::with('category');
@@ -20,7 +23,7 @@ class ProductController extends Controller
                   ->orWhere('sku', 'like', "%{$search}%")
                   ->orWhere('barcode', 'like', "%{$search}%");
             });
-        }
+       }
 
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
@@ -30,9 +33,19 @@ class ProductController extends Controller
             $query->whereRaw('stock_quantity <= min_stock_level');
         }
 
-        $products = $query->orderBy('name')->paginate($request->per_page ?? 15);
+        if ($request->has('out_of_stock')) {
+            $query->where('stock_quantity', 0);
+        }
 
-        return response()->json($products);
+        if ($request->has('in_stock_only')) {
+            $query->whereRaw('stock_quantity > min_stock_level');
+        }
+
+        $query->orderBy('name');
+        
+        // Always paginate - default to 10 items per page if not specified
+        $perPage = $request->input('per_page', 10);
+        return response()->json($query->paginate($perPage));
     }
 
     public function store(Request $request)

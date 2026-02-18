@@ -94,7 +94,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="product in productReport.products" :key="product.id">
+                        <tr v-for="product in (productReport?.products || []).filter(p => p != null && p.id != null)" :key="product.id">
                             <td>{{ product.name }}</td>
                             <td>{{ product.sku }}</td>
                             <td>{{ product.category?.name || 'N/A' }}</td>
@@ -147,7 +147,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="movement in inventoryReport.movements" :key="movement.id">
+                        <tr v-for="movement in (inventoryReport?.movements || []).filter(m => m != null && m.id != null)" :key="movement.id">
                             <td>{{ formatDate(movement.created_at) }}</td>
                             <td>{{ movement.product?.name }}</td>
                             <td>
@@ -212,7 +212,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="sale in salesReport.sales" :key="sale.id">
+                        <tr v-for="sale in (salesReport?.sales || []).filter(s => s != null && s.id != null)" :key="sale.id">
                             <td>{{ sale.invoice_number }}</td>
                             <td>{{ formatDate(sale.sale_date) }}</td>
                             <td>{{ sale.customer?.name || 'Walk-in' }}</td>
@@ -239,7 +239,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(product, index) in salesReport.top_products" :key="product.product_id">
+                        <tr v-for="(product, index) in (salesReport?.top_products || []).filter(p => p != null && (p.product_id != null || p.id != null))" :key="product.product_id || product.id || index">
                             <td>{{ index + 1 }}. {{ product.product_name }}</td>
                             <td>{{ product.sku }}</td>
                             <td>{{ product.quantity }}</td>

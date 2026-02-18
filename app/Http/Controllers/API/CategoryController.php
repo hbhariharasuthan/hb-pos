@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\API\Traits\HasDropdownPagination;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class CategoryController extends Controller
 {
+    use HasDropdownPagination;
+
     public function index(Request $request)
     {
         // Check if this is the 'all' route (for master page)
@@ -17,9 +20,24 @@ class CategoryController extends Controller
             return response()->json($categories);
         }
         
-        // Default: return only active categories (for dropdowns)
-        $categories = Category::where('is_active', true)->orderBy('name')->get();
-        return response()->json($categories);
+        // List route: paginated with optional search and status filter
+        $query = Category::withCount('products')->orderBy('name');
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('is_active') && $request->is_active !== '' && $request->is_active !== null) {
+            $query->where('is_active', (bool) $request->is_active);
+        }
+
+        $perPage = $request->input('per_page', 10);
+        return response()->json($query->paginate($perPage));
     }
 
     public function store(Request $request)

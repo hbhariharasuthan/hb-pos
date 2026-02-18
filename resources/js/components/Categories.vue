@@ -14,7 +14,7 @@
             </select>
         </div>
 
-        <div class="table-container">
+        <div ref="tableContainer" class="table-container" @scroll="handleScroll">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -44,6 +44,11 @@
                     </tr>
                 </tbody>
             </table>
+            <div ref="loadMoreTrigger" v-if="hasMore" class="load-more-trigger">
+                <div v-if="loading" class="loading-indicator">Loading more categories...</div>
+                <div v-else class="load-more-hint">Scroll for more</div>
+            </div>
+            <div v-if="!hasMore && filteredCategories.length > 0" class="no-more-indicator">No more categories to load</div>
         </div>
 
         <!-- Category Modal -->
@@ -80,13 +85,13 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 
 export default {
     name: 'Categories',
     setup() {
-        const categories = ref([]);
         const search = ref('');
         const statusFilter = ref('');
         const showModal = ref(false);
@@ -98,32 +103,30 @@ export default {
             is_active: true
         });
 
-        const filteredCategories = computed(() => {
-            let filtered = categories.value;
-            if (search.value) {
-                const s = search.value.toLowerCase();
-                filtered = filtered.filter(c => 
-                    c.name.toLowerCase().includes(s) ||
-                    (c.code && c.code.toLowerCase().includes(s)) ||
-                    (c.description && c.description.toLowerCase().includes(s))
-                );
-            }
-            if (statusFilter.value === 'active') {
-                filtered = filtered.filter(c => c.is_active);
-            } else if (statusFilter.value === 'inactive') {
-                filtered = filtered.filter(c => !c.is_active);
-            }
-            return filtered;
+        const {
+            items: categories,
+            loading,
+            hasMore,
+            loadInitial,
+            loadMore,
+            search: searchCategories,
+            updateFilter
+        } = usePaginatedDropdown('/api/categories', {
+            searchParam: 'search',
+            initialFilters: {},
+            perPage: 10
         });
 
-        const loadCategories = async () => {
-            try {
-                const response = await axios.get('/api/categories/all');
-                categories.value = response.data.data || response.data;
-            } catch (error) {
-                console.error('Error loading categories:', error);
-            }
-        };
+        watch(search, (v) => searchCategories(v));
+        watch(statusFilter, (v) => {
+            if (v === 'active') updateFilter('is_active', 1);
+            else if (v === 'inactive') updateFilter('is_active', 0);
+            else updateFilter('is_active', null);
+        });
+
+        const filteredCategories = computed(() => (categories.value || []).filter(c => c != null && c.id != null));
+
+        const loadCategories = () => loadInitial();
 
         const editCategory = (category) => {
             editingCategory.value = category;
@@ -138,7 +141,7 @@ export default {
                 } else {
                     await axios.post('/api/categories', form.value);
                 }
-                await loadCategories();
+                loadInitial();
                 showModal.value = false;
                 resetForm();
             } catch (error) {
@@ -150,7 +153,7 @@ export default {
             if (!confirm('Are you sure you want to delete this category?')) return;
             try {
                 await axios.delete(`/api/categories/${id}`);
-                await loadCategories();
+                loadInitial();
             } catch (error) {
                 alert(error.response?.data?.message || 'Error deleting category');
             }
@@ -166,13 +169,43 @@ export default {
             editingCategory.value = null;
         };
 
+        const scrollObserver = ref(null);
+        const loadMoreTrigger = ref(null);
+        const tableContainer = ref(null);
+
+        const setupScrollObserver = () => {
+            if (typeof IntersectionObserver === 'undefined' || !tableContainer.value || !loadMoreTrigger.value) return;
+            scrollObserver.value = new IntersectionObserver(
+                (entries) => {
+                    if (entries[0].isIntersecting && hasMore.value && !loading.value) loadMore();
+                },
+                { root: tableContainer.value, rootMargin: '50px', threshold: 0.1 }
+            );
+            scrollObserver.value.observe(loadMoreTrigger.value);
+        };
+
+        const handleScroll = (e) => {
+            const el = e.target;
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < 100 && hasMore.value && !loading.value) loadMore();
+        };
+
         onMounted(() => {
-            loadCategories();
+            loadInitial();
+            setTimeout(() => setupScrollObserver(), 100);
+        });
+
+        watch([loadMoreTrigger, tableContainer], () => {
+            if (loadMoreTrigger.value && tableContainer.value) setupScrollObserver();
         });
 
         return {
             categories,
             search,
+            loading,
+            hasMore,
+            handleScroll,
+            tableContainer,
+            loadMoreTrigger,
             statusFilter,
             showModal,
             editingCategory,
@@ -214,8 +247,27 @@ export default {
 .table-container {
     background: white;
     border-radius: 8px;
-    overflow: hidden;
+    overflow-y: auto;
+    max-height: calc(100vh - 250px);
 }
+
+.load-more-trigger {
+    min-height: 50px;
+    padding: 15px;
+    text-align: center;
+}
+
+.loading-indicator,
+.no-more-indicator,
+.load-more-hint {
+    padding: 15px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+
+.loading-indicator { color: #667eea; }
+.load-more-hint { color: #999; font-size: 12px; }
 
 .data-table {
     width: 100%;

@@ -22,7 +22,7 @@
 
                 <div class="products-grid">
                     <div
-                        v-for="product in products"
+                        v-for="product in (products || []).filter(p => p != null && p.id != null)"
                         :key="product.id"
                         class="product-card"
                         :class="{ 'low-stock': product.stock_quantity <= product.min_stock_level }"
@@ -106,112 +106,11 @@
             </div>
         </div>
 
-        <!-- Thermal Receipt (Hidden, for printing) -->
-        <div v-if="showReceipt && lastSale" style="position: absolute; left: -9999px;">
-            <div id="thermal-receipt-styles">
-                <style>
-                    .thermal-receipt {
-                        width: 80mm;
-                        max-width: 80mm;
-                        margin: 0 auto;
-                        padding: 5mm;
-                        background: white;
-                        font-family: 'Courier New', monospace;
-                        font-size: 12px;
-                        line-height: 1.4;
-                        color: #000;
-                    }
-                    .receipt-header { text-align: center; margin-bottom: 10px; }
-                    .company-name { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
-                    .company-address { font-size: 11px; margin-bottom: 3px; }
-                    .company-contact { font-size: 10px; color: #666; }
-                    .receipt-divider { text-align: center; margin: 8px 0; font-size: 11px; }
-                    .receipt-section { margin: 8px 0; }
-                    .receipt-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; }
-                    .receipt-row.total-row { font-weight: bold; font-size: 14px; border-top: 1px dashed #ccc; padding-top: 4px; }
-                    .label { flex: 1; text-align: left; }
-                    .value { flex: 1; text-align: right; font-weight: 500; }
-                    .receipt-item { margin: 6px 0; padding-bottom: 4px; }
-                    .item-name { font-weight: 500; margin-bottom: 2px; font-size: 11px; }
-                    .item-row { display: flex; justify-content: space-between; font-size: 11px; margin-left: 10px; }
-                    .item-discount { font-size: 10px; color: #666; margin-left: 10px; }
-                    .item-qty, .item-price, .item-total { flex: 1; text-align: right; }
-                    .item-qty { text-align: left; }
-                    .receipt-footer { text-align: center; margin-top: 15px; }
-                    .footer-text { font-size: 10px; margin: 4px 0; color: #666; }
-                </style>
-            </div>
-            <div id="thermal-receipt-print" class="thermal-receipt">
-                <div class="receipt-header">
-                    <div class="company-name">HB POS System</div>
-                    <div class="company-address">hbitpartner.com</div>
-                    <div class="company-contact">Your IT Partner</div>
-                </div>
-                <div class="receipt-divider">--------------------------------</div>
-                <div class="receipt-section">
-                    <div class="receipt-row">
-                        <span class="label">Invoice:</span>
-                        <span class="value">{{ lastSale.invoice_number }}</span>
-                    </div>
-                    <div class="receipt-row">
-                        <span class="label">Date:</span>
-                        <span class="value">{{ new Date(lastSale.sale_date).toLocaleString('en-IN') }}</span>
-                    </div>
-                    <div class="receipt-row" v-if="lastSale.customer">
-                        <span class="label">Customer:</span>
-                        <span class="value">{{ lastSale.customer.name }}</span>
-                    </div>
-                </div>
-                <div class="receipt-divider">--------------------------------</div>
-                <div class="receipt-section">
-                    <div v-for="item in lastSale.items" :key="item.id" class="receipt-item">
-                        <div class="item-name">{{ item.product?.name || 'N/A' }}</div>
-                        <div class="item-row">
-                            <span class="item-qty">{{ formatCartQty(item.quantity, item.product?.unit) }} {{ item.product?.unit || 'pcs' }}</span>
-                            <span class="item-price">₹{{ item.unit_price }}</span>
-                            <span class="item-total">₹{{ item.total }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="receipt-divider">--------------------------------</div>
-                <div class="receipt-section">
-                    <div class="receipt-row">
-                        <span class="label">Subtotal:</span>
-                        <span class="value">₹{{ lastSale.subtotal }}</span>
-                    </div>
-                    <div v-if="lastSale.discount > 0" class="receipt-row">
-                        <span class="label">Discount:</span>
-                        <span class="value">-₹{{ lastSale.discount }}</span>
-                    </div>
-                    <div v-if="lastSale.tax_amount > 0" class="receipt-row">
-                        <span class="label">Tax:</span>
-                        <span class="value">₹{{ lastSale.tax_amount }}</span>
-                    </div>
-                    <div class="receipt-row total-row">
-                        <span class="label">TOTAL:</span>
-                        <span class="value">₹{{ lastSale.total }}</span>
-                    </div>
-                </div>
-                <div class="receipt-divider">================================</div>
-                <div class="receipt-section">
-                    <div class="receipt-row">
-                        <span class="label">Payment:</span>
-                        <span class="value">{{ lastSale.payment_method.toUpperCase() }}</span>
-                    </div>
-                </div>
-                <div class="receipt-divider">--------------------------------</div>
-                <div class="receipt-footer">
-                    <div class="footer-text">Thank you for your business!</div>
-                    <div class="footer-text">Visit us at hbitpartner.com</div>
-                </div>
-            </div>
-        </div>
 
         <!-- Customer Modal -->
         <div v-if="showCustomerModal" class="modal-overlay" @click="toggleCustomerModal">
             <div class="modal-content" @click.stop>
                 <h2>Select Customer</h2>
-                <input v-model="customerSearch" type="text" placeholder="Search customers..." class="search-input" @keyup.enter="searchAndAddCustomer" />
                 
                 <div v-if="showAddCustomerForm" class="add-customer-form">
                     <h3>Add New Customer</h3>
@@ -233,24 +132,22 @@
                     </div>
                 </div>
 
-                <div v-else class="customer-list">
-                    <div class="customer-item" @click="selectCustomer(null)">
+                <div v-else>
+                    <div class="customer-item walk-in" @click="selectCustomer(null)">
                         <strong>Walk-in Customer</strong>
                     </div>
-                    <div
-                        v-for="customer in filteredCustomers"
-                        :key="customer.id"
-                        class="customer-item"
-                        @click="selectCustomer(customer)"
-                    >
-                        <strong>{{ customer.name }}</strong>
-                        <span>{{ customer.phone || customer.email }}</span>
-                    </div>
-                    <div v-if="customerSearch && filteredCustomers.length === 0" class="no-customer-found">
-                        <p>No customer found</p>
-                        <button @click="showAddCustomerForm = true" class="btn btn-primary">Add New Customer</button>
-                    </div>
-                    <div v-else-if="!customerSearch" class="add-customer-option">
+                    <PaginatedDropdown
+                        :model-value="selectedCustomer?.id"
+                        endpoint="/api/customers"
+                        search-param="search"
+                        value-key="id"
+                        label-key="name"
+                        secondary-label-key="phone"
+                        placeholder="Search customers..."
+                        :emit-full-item="true"
+                        @select="handleCustomerSelect"
+                    />
+                    <div class="add-customer-option">
                         <button @click="showAddCustomerForm = true" class="btn btn-outline">+ Add New Customer</button>
                     </div>
                 </div>
@@ -262,15 +159,17 @@
 <script>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import PaginatedDropdown from './PaginatedDropdown.vue';
 
 export default {
     name: 'POS',
+    components: {
+        PaginatedDropdown
+    },
     setup() {
         const products = ref([]);
-        const customers = ref([]);
         const cart = ref([]);
         const searchQuery = ref('');
-        const customerSearch = ref('');
         const taxRate = ref(0);
         const discount = ref(0);
         const paymentMethod = ref('cash');
@@ -298,33 +197,30 @@ export default {
             return subtotal.value - discount.value + taxAmount.value;
         });
 
-        const filteredCustomers = computed(() => {
-            if (!customerSearch.value) return customers.value;
-            const search = customerSearch.value.toLowerCase();
-            return customers.value.filter(c => 
-                c.name.toLowerCase().includes(search) ||
-                (c.email && c.email.toLowerCase().includes(search)) ||
-                (c.phone && c.phone.includes(search))
-            );
-        });
+        // Handle customer selection from PaginatedDropdown
+        const handleCustomerSelect = (customer) => {
+            if (!customer) {
+                selectCustomer(null);
+                return;
+            }
+            selectCustomer(customer);
+        };
 
         const loadProducts = async () => {
             try {
                 const response = await axios.get('/api/pos/products');
-                products.value = response.data;
+                const data = response.data;
+                // Filter out null/undefined items to prevent errors
+                products.value = Array.isArray(data) 
+                    ? data.filter(product => product != null && product.id != null)
+                    : [];
             } catch (error) {
                 console.error('Error loading products:', error);
+                products.value = [];
             }
         };
 
-        const loadCustomers = async () => {
-            try {
-                const response = await axios.get('/api/customers', { params: { per_page: 100 } });
-                customers.value = response.data.data || response.data;
-            } catch (error) {
-                console.error('Error loading customers:', error);
-            }
-        };
+        // Removed loadCustomers - now handled by PaginatedDropdown component
 
         const searchProducts = async () => {
             try {
@@ -597,7 +493,6 @@ export default {
             showCustomerModal.value = !showCustomerModal.value;
             if (!showCustomerModal.value) {
                 showAddCustomerForm.value = false;
-                customerSearch.value = '';
                 newCustomer.value = { name: '', phone: '', email: '' };
             }
         };
@@ -606,17 +501,10 @@ export default {
             selectedCustomer.value = customer;
             showCustomerModal.value = false;
             showAddCustomerForm.value = false;
-            customerSearch.value = '';
             newCustomer.value = { name: '', phone: '', email: '' };
         };
 
-        const searchAndAddCustomer = () => {
-            if (customerSearch.value && filteredCustomers.value.length === 0) {
-                // If search has value but no results, show add form
-                newCustomer.value.name = customerSearch.value;
-                showAddCustomerForm.value = true;
-            }
-        };
+        // Removed searchAndAddCustomer - handled by PaginatedDropdown
 
         const addNewCustomer = async () => {
             if (!newCustomer.value.name || !newCustomer.value.phone) {
@@ -632,7 +520,6 @@ export default {
                 });
 
                 const createdCustomer = response.data;
-                customers.value.push(createdCustomer);
                 selectCustomer(createdCustomer);
                 alert('Customer added successfully!');
             } catch (error) {
@@ -696,15 +583,12 @@ export default {
 
         onMounted(() => {
             loadProducts();
-            loadCustomers();
         });
 
         return {
             products,
-            customers,
             cart,
             searchQuery,
-            customerSearch,
             taxRate,
             discount,
             paymentMethod,
@@ -718,7 +602,6 @@ export default {
             subtotal,
             taxAmount,
             total,
-            filteredCustomers,
             searchProducts,
             addToCart,
             updateQuantity,
@@ -731,12 +614,10 @@ export default {
             isWeightUnit,
             toggleCustomerModal,
             selectCustomer,
-            searchAndAddCustomer,
+            handleCustomerSelect,
             addNewCustomer,
             processSale,
-            printThermalReceipt,
-            lastSale,
-            showReceipt
+            printThermalReceipt
         };
     }
 };
@@ -1133,6 +1014,21 @@ export default {
 
 .no-customer-found p {
     margin-bottom: 15px;
+}
+
+.customer-item.walk-in {
+    margin-bottom: 15px;
+    padding: 12px;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #f0f4ff;
+}
+
+.customer-item.walk-in:hover {
+    background: #e7f0ff;
+    border-color: #764ba2;
 }
 
 .add-customer-option {

@@ -37,7 +37,7 @@
             </div>
             <div class="receipt-divider">--------------------------------</div>
             
-            <div v-for="item in sale.items" :key="item.id" class="receipt-item">
+            <div v-for="item in (sale.items || []).filter(i => i != null && i.id != null)" :key="item.id" class="receipt-item">
                 <div class="item-name">{{ truncateText(item.product?.name || 'N/A', 20) }}</div>
                 <div class="item-row">
                     <span class="item-qty">{{ item.quantity }}</span>

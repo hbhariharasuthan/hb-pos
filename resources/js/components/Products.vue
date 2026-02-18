@@ -9,11 +9,11 @@
             <input v-model="search" type="text" placeholder="Search products..." class="search-input" />
             <select v-model="categoryFilter" class="select-input">
                 <option value="">All Categories</option>
-                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                <option v-for="cat in (categories || []).filter(c => c != null && c.id != null)" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
         </div>
 
-        <div class="table-container">
+        <div ref="tableContainer" class="table-container" @scroll="handleScroll">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -47,6 +47,19 @@
                     </tr>
                 </tbody>
             </table>
+            <div 
+                ref="loadMoreTrigger"
+                v-if="hasMore"
+                class="load-more-trigger"
+            >
+                <div v-if="loading" class="loading-indicator">
+                    Loading more products...
+                </div>
+                <div v-else class="load-more-hint">Scroll for more</div>
+            </div>
+            <div v-if="!hasMore && filteredProducts.length > 0" class="no-more-indicator">
+                No more products to load
+            </div>
         </div>
 
         <!-- Product Modal -->
@@ -66,7 +79,7 @@
                         <label>Category</label>
                         <select v-model="form.category_id">
                             <option value="">Select Category</option>
-                            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                            <option v-for="cat in (categories || []).filter(c => c != null && c.id != null)" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -111,13 +124,13 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 
 export default {
     name: 'Products',
     setup() {
-        const products = ref([]);
         const categories = ref([]);
         const search = ref('');
         const categoryFilter = ref('');
@@ -135,36 +148,92 @@ export default {
             is_active: true
         });
 
-        const filteredProducts = computed(() => {
-            let filtered = products.value;
-            if (search.value) {
-                const s = search.value.toLowerCase();
-                filtered = filtered.filter(p => 
-                    p.name.toLowerCase().includes(s) ||
-                    p.sku.toLowerCase().includes(s)
-                );
-            }
-            if (categoryFilter.value) {
-                filtered = filtered.filter(p => p.category_id == categoryFilter.value);
-            }
-            return filtered;
+        // Use paginated dropdown composable
+        const {
+            items: products,
+            loading,
+            hasMore,
+            loadInitial,
+            loadMore,
+            search: searchProducts,
+            updateFilter
+        } = usePaginatedDropdown('/api/products', {
+            searchParam: 'search',
+            initialFilters: {},
+            perPage: 10
         });
 
-        const loadProducts = async () => {
-            try {
-                const response = await axios.get('/api/products', { params: { per_page: 1000 } });
-                products.value = response.data.data || response.data;
-            } catch (error) {
-                console.error('Error loading products:', error);
-            }
-        };
+        // Watch for search changes
+        watch(search, (newValue) => {
+            searchProducts(newValue);
+        });
+
+        // Watch for category filter changes
+        watch(categoryFilter, (newValue) => {
+            updateFilter('category_id', newValue || null);
+        });
+
+        const filteredProducts = computed(() => {
+            // Filter out null/undefined items to prevent errors
+            return (products.value || []).filter(product => product != null && product.id != null);
+        });
 
         const loadCategories = async () => {
             try {
-                const response = await axios.get('/api/categories');
-                categories.value = response.data;
+                const response = await axios.get('/api/categories/all');
+                const data = response.data.data || response.data;
+                // Filter out null/undefined items to prevent errors
+                categories.value = Array.isArray(data) 
+                    ? data.filter(cat => cat != null && cat.id != null)
+                    : [];
             } catch (error) {
                 console.error('Error loading categories:', error);
+                categories.value = [];
+            }
+        };
+
+        // Intersection Observer for infinite scroll
+        const scrollObserver = ref(null);
+        const loadMoreTrigger = ref(null);
+        const tableContainer = ref(null);
+
+        // Setup intersection observer for infinite scroll
+        const setupScrollObserver = () => {
+            if (typeof IntersectionObserver === 'undefined') {
+                // Fallback to scroll event for older browsers
+                return;
+            }
+
+            if (!tableContainer.value || !loadMoreTrigger.value) {
+                return;
+            }
+
+            scrollObserver.value = new IntersectionObserver(
+                (entries) => {
+                    const entry = entries[0];
+                    if (entry.isIntersecting && hasMore.value && !loading.value) {
+                        loadMore();
+                    }
+                },
+                {
+                    root: tableContainer.value, // Use scrollable container as root
+                    rootMargin: '50px', // Trigger 50px before reaching the bottom
+                    threshold: 0.1
+                }
+            );
+
+            // Observe the trigger element
+            scrollObserver.value.observe(loadMoreTrigger.value);
+        };
+
+        // Fallback scroll handler for older browsers
+        const handleScroll = (event) => {
+            const element = event.target;
+            const scrollBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
+            
+            // Load more when within 100px of bottom
+            if (scrollBottom < 100 && hasMore.value && !loading.value) {
+                loadMore();
             }
         };
 
@@ -181,7 +250,7 @@ export default {
                 } else {
                     await axios.post('/api/products', form.value);
                 }
-                await loadProducts();
+                loadInitial(); // Reload from page 1
                 showModal.value = false;
                 resetForm();
             } catch (error) {
@@ -193,7 +262,7 @@ export default {
             if (!confirm('Are you sure you want to delete this product?')) return;
             try {
                 await axios.delete(`/api/products/${id}`);
-                await loadProducts();
+                loadInitial(); // Reload from page 1
             } catch (error) {
                 alert(error.response?.data?.message || 'Error deleting product');
             }
@@ -228,8 +297,19 @@ export default {
         };
 
         onMounted(() => {
-            loadProducts();
+            loadInitial();
             loadCategories();
+            // Setup scroll observer after DOM is ready
+            setTimeout(() => {
+                setupScrollObserver();
+            }, 100);
+        });
+
+        // Watch for loadMoreTrigger element and setup observer
+        watch([loadMoreTrigger, tableContainer], () => {
+            if (loadMoreTrigger.value && tableContainer.value) {
+                setupScrollObserver();
+            }
         });
 
         return {
@@ -241,6 +321,12 @@ export default {
             editingProduct,
             form,
             filteredProducts,
+            loading,
+            hasMore,
+            handleScroll,
+            tableContainer,
+            loadMoreTrigger,
+            loadMore,
             editProduct,
             saveProduct,
             deleteProduct,
@@ -279,7 +365,32 @@ export default {
 .table-container {
     background: white;
     border-radius: 8px;
-    overflow: hidden;
+    overflow-y: auto;
+    max-height: calc(100vh - 250px);
+}
+
+.load-more-trigger {
+    min-height: 50px;
+    padding: 15px;
+    text-align: center;
+}
+
+.loading-indicator,
+.no-more-indicator,
+.load-more-hint {
+    padding: 15px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+
+.loading-indicator {
+    color: #667eea;
+}
+
+.load-more-hint {
+    color: #999;
+    font-size: 12px;
 }
 
 .data-table {

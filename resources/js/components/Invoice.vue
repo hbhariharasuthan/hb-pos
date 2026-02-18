@@ -42,7 +42,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="item in sale?.items" :key="item.id">
+                        <tr v-for="item in (sale?.items || []).filter(i => i != null && i.id != null)" :key="item.id">
                             <td>{{ item.product?.name }}</td>
                             <td>{{ formatItemQty(item.quantity, item.product?.unit) }} {{ item.product?.unit || 'pcs' }}</td>
                             <td>₹{{ item.unit_price }}</td>

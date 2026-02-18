@@ -13,6 +13,16 @@ use Illuminate\Validation\ValidationException;
 
 class POSController extends Controller
 {
+    /**
+     * Products for POS screen and (optionally) paginated consumers.
+     *
+     * Default behaviour stays the same as before: return a plain array of
+     * products for the POS grid so existing Vue code that does
+     * `v-for="product in products"` continues to work.
+     *
+     * If `per_page` or `paginated=1` is passed, a standard Laravel paginator
+     * JSON structure is returned instead (for dropdowns / infinite scroll).
+     */
     public function getProducts(Request $request)
     {
         $query = Product::where('is_active', true)
@@ -21,13 +31,22 @@ class POSController extends Controller
 
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhere('barcode', 'like', "%{$search}%");
             });
         }
 
+        $query->orderBy('name');
+
+        // Explicit paginated mode for dropdowns / infinite scroll
+        if ($request->has('per_page') || $request->boolean('paginated')) {
+            $perPage = (int) $request->input('per_page', 10);
+            return response()->json($query->paginate($perPage));
+        }
+
+        // Default: plain array (backwards compatible with existing POS UI)
         return response()->json($query->get());
     }
 

@@ -12,7 +12,7 @@
             <input v-model="search" type="text" placeholder="Search products..." class="search-input" />
             <select v-model="categoryFilter" class="select-input">
                 <option value="">All Categories</option>
-                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                <option v-for="cat in (categories || []).filter(c => c != null && c.id != null)" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
             <select v-model="stockFilter" class="select-input">
                 <option value="">All Stock Levels</option>
@@ -28,33 +28,33 @@
                 <div class="stat-icon">📦</div>
                 <div class="stat-info">
                     <h3>Total Products</h3>
-                    <p class="stat-value">{{ stats.totalProducts }}</p>
+                    <p class="stat-value">{{ stats.total_products }}</p>
                 </div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">✅</div>
                 <div class="stat-info">
                     <h3>In Stock</h3>
-                    <p class="stat-value">{{ stats.inStock }}</p>
+                    <p class="stat-value">{{ stats.in_stock }}</p>
                 </div>
             </div>
             <div class="stat-card warning">
                 <div class="stat-icon">⚠️</div>
                 <div class="stat-info">
                     <h3>Low Stock</h3>
-                    <p class="stat-value">{{ stats.lowStock }}</p>
+                    <p class="stat-value">{{ stats.low_stock }}</p>
                 </div>
             </div>
             <div class="stat-card danger">
                 <div class="stat-icon">❌</div>
                 <div class="stat-info">
                     <h3>Out of Stock</h3>
-                    <p class="stat-value">{{ stats.outOfStock }}</p>
+                    <p class="stat-value">{{ stats.out_of_stock }}</p>
                 </div>
             </div>
         </div>
 
-        <div class="table-container">
+        <div ref="tableContainer" class="table-container" @scroll="handleScroll">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -94,6 +94,15 @@
                     </tr>
                 </tbody>
             </table>
+            <div
+                ref="loadMoreTrigger"
+                v-if="hasMore"
+                class="load-more-trigger"
+            >
+                <div v-if="loading" class="loading-indicator">Loading more...</div>
+                <div v-else class="load-more-hint">Scroll for more</div>
+            </div>
+            <div v-if="!hasMore && filteredProducts.length > 0" class="no-more-indicator">No more items to load</div>
         </div>
 
         <!-- Stock Adjustment Modal -->
@@ -105,7 +114,7 @@
                         <label>Product</label>
                         <select v-model="adjustForm.product_id" @change="loadProductDetails" required>
                             <option value="">Select Product</option>
-                            <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} ({{ p.sku }})</option>
+                            <option v-for="p in (products || []).filter(p => p != null && p.id != null)" :key="p.id" :value="p.id">{{ p.name }} ({{ p.sku }})</option>
                         </select>
                     </div>
                     <div v-if="selectedProduct" class="product-info-box">
@@ -155,7 +164,7 @@
             <div class="modal-content large" @click.stop>
                 <h2>Stock Movement History - {{ selectedProduct?.name }}</h2>
                 <div class="history-list">
-                    <div v-for="movement in stockHistory" :key="movement.id" class="history-item">
+                    <div v-for="movement in (stockHistory || []).filter(m => m != null && m.id != null)" :key="movement.id" class="history-item">
                         <div class="history-date">{{ formatDate(movement.created_at) }}</div>
                         <div class="history-type" :class="getMovementTypeClass(movement.type)">
                             {{ movement.type.toUpperCase() }}
@@ -182,7 +191,7 @@
             <div class="modal-content" @click.stop>
                 <h2>Low Stock Alerts</h2>
                 <div class="low-stock-list">
-                    <div v-for="product in lowStockProducts" :key="product.id" class="low-stock-item">
+                    <div v-for="product in (lowStockProducts || []).filter(p => p != null && p.id != null)" :key="product.id" class="low-stock-item">
                         <div class="item-info">
                             <h4>{{ product.name }}</h4>
                             <p>SKU: {{ product.sku }}</p>
@@ -203,14 +212,16 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 
 export default {
     name: 'Inventory',
     setup() {
-        const products = ref([]);
+        const products = ref([]); // for modal dropdown only
         const categories = ref([]);
+        const stats = ref({ totalProducts: 0, inStock: 0, lowStock: 0, outOfStock: 0, total_value: 0 });
         const stockHistory = ref([]);
         const lowStockProducts = ref([]);
         const search = ref('');
@@ -229,64 +240,79 @@ export default {
             notes: ''
         });
 
-        const stats = computed(() => {
-            const total = products.value.length;
-            const inStock = products.value.filter(p => p.stock_quantity > p.min_stock_level).length;
-            const lowStock = products.value.filter(p => p.stock_quantity > 0 && p.stock_quantity <= p.min_stock_level).length;
-            const outOfStock = products.value.filter(p => p.stock_quantity === 0).length;
-            
-            return { totalProducts: total, inStock, lowStock, outOfStock };
+        const {
+            items: tableProducts,
+            loading,
+            hasMore,
+            loadInitial,
+            loadMore,
+            search: searchProducts,
+            updateFilter,
+            applyFilters
+        } = usePaginatedDropdown('/api/products', {
+            searchParam: 'search',
+            initialFilters: {},
+            perPage: 10
         });
 
-        const filteredProducts = computed(() => {
-            let filtered = products.value;
-            
-            if (search.value) {
-                const s = search.value.toLowerCase();
-                filtered = filtered.filter(p => 
-                    p.name.toLowerCase().includes(s) ||
-                    p.sku.toLowerCase().includes(s)
-                );
-            }
-            
-            if (categoryFilter.value) {
-                filtered = filtered.filter(p => p.category_id == categoryFilter.value);
-            }
-            
-            if (stockFilter.value === 'low') {
-                filtered = filtered.filter(p => p.stock_quantity > 0 && p.stock_quantity <= p.min_stock_level);
-            } else if (stockFilter.value === 'out') {
-                filtered = filtered.filter(p => p.stock_quantity === 0);
-            } else if (stockFilter.value === 'in_stock') {
-                filtered = filtered.filter(p => p.stock_quantity > p.min_stock_level);
-            }
-            
-            return filtered;
+        watch(search, (v) => searchProducts(v));
+        watch(categoryFilter, (v) => updateFilter('category_id', v || null));
+        watch(stockFilter, (v) => {
+            const stockFilters = { low_stock: null, out_of_stock: null, in_stock_only: null };
+            if (v === 'low') stockFilters.low_stock = 1;
+            else if (v === 'out') stockFilters.out_of_stock = 1;
+            else if (v === 'in_stock') stockFilters.in_stock_only = 1;
+            applyFilters(stockFilters);
         });
 
-        const loadInventory = async () => {
+        const filteredProducts = computed(() => (tableProducts.value || []).filter(p => p != null && p.id != null));
+
+        const loadStats = async () => {
             try {
-                const response = await axios.get('/api/products', { params: { per_page: 1000 } });
-                products.value = response.data.data || response.data;
-            } catch (error) {
-                console.error('Error loading inventory:', error);
-                alert('Error loading inventory');
+                const res = await axios.get('/api/stock/stats');
+                stats.value = res.data;
+            } catch (e) {
+                console.error('Error loading stats:', e);
+            }
+        };
+
+        const loadInventory = () => {
+            loadInitial();
+            loadStats();
+        };
+
+        const loadProductsForModal = async () => {
+            try {
+                const res = await axios.get('/api/products', { params: { per_page: 200 } });
+                const data = res.data.data || res.data;
+                products.value = Array.isArray(data) ? data.filter(p => p != null && p.id != null) : [];
+            } catch (e) {
+                products.value = [];
             }
         };
 
         const loadCategories = async () => {
             try {
-                const response = await axios.get('/api/categories');
-                categories.value = response.data;
+                const response = await axios.get('/api/categories/all');
+                const data = response.data.data || response.data;
+                // Filter out null/undefined items to prevent errors
+                categories.value = Array.isArray(data) 
+                    ? data.filter(cat => cat != null && cat.id != null)
+                    : [];
             } catch (error) {
                 console.error('Error loading categories:', error);
+                categories.value = [];
             }
         };
 
         const loadLowStock = async () => {
             try {
                 const response = await axios.get('/api/stock/low-stock');
-                lowStockProducts.value = response.data;
+                const data = response.data.data || response.data;
+                // Filter out null/undefined items to prevent errors
+                lowStockProducts.value = Array.isArray(data) 
+                    ? data.filter(product => product != null && product.id != null)
+                    : [];
                 showLowStockModal.value = true;
             } catch (error) {
                 console.error('Error loading low stock:', error);
@@ -296,11 +322,33 @@ export default {
 
         const loadProductDetails = () => {
             if (adjustForm.value.product_id) {
-                selectedProduct.value = products.value.find(p => p.id == adjustForm.value.product_id);
+                const fromList = products.value.find(p => p.id == adjustForm.value.product_id)
+                    || tableProducts.value.find(p => p.id == adjustForm.value.product_id);
+                selectedProduct.value = fromList || null;
                 if (selectedProduct.value && !adjustForm.value.unit_cost) {
                     adjustForm.value.unit_cost = selectedProduct.value.cost_price;
                 }
             }
+        };
+
+        const scrollObserver = ref(null);
+        const loadMoreTrigger = ref(null);
+        const tableContainer = ref(null);
+
+        const setupScrollObserver = () => {
+            if (typeof IntersectionObserver === 'undefined' || !tableContainer.value || !loadMoreTrigger.value) return;
+            scrollObserver.value = new IntersectionObserver(
+                (entries) => {
+                    if (entries[0].isIntersecting && hasMore.value && !loading.value) loadMore();
+                },
+                { root: tableContainer.value, rootMargin: '50px', threshold: 0.1 }
+            );
+            scrollObserver.value.observe(loadMoreTrigger.value);
+        };
+
+        const handleScroll = (e) => {
+            const el = e.target;
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < 100 && hasMore.value && !loading.value) loadMore();
         };
 
         const adjustStock = (product) => {
@@ -348,7 +396,11 @@ export default {
                 const response = await axios.get('/api/stock/movements', {
                     params: { product_id: product.id, per_page: 100 }
                 });
-                stockHistory.value = response.data.data || response.data;
+                const data = response.data.data || response.data;
+                // Filter out null/undefined items to prevent errors
+                stockHistory.value = Array.isArray(data) 
+                    ? data.filter(movement => movement != null && movement.id != null)
+                    : [];
                 showHistoryModal.value = true;
             } catch (error) {
                 console.error('Error loading history:', error);
@@ -420,14 +472,28 @@ export default {
             return new Date(date).toLocaleString();
         };
 
+        watch(showAdjustModal, (open) => {
+            if (open) loadProductsForModal();
+        });
+
         onMounted(() => {
             loadInventory();
             loadCategories();
+            setTimeout(() => setupScrollObserver(), 100);
+        });
+
+        watch([loadMoreTrigger, tableContainer], () => {
+            if (loadMoreTrigger.value && tableContainer.value) setupScrollObserver();
         });
 
         return {
             products,
             categories,
+            loading,
+            hasMore,
+            handleScroll,
+            tableContainer,
+            loadMoreTrigger,
             stockHistory,
             lowStockProducts,
             search,
@@ -536,8 +602,27 @@ export default {
 .table-container {
     background: white;
     border-radius: 8px;
-    overflow: hidden;
+    overflow-y: auto;
+    max-height: calc(100vh - 350px);
 }
+
+.load-more-trigger {
+    min-height: 50px;
+    padding: 15px;
+    text-align: center;
+}
+
+.loading-indicator,
+.no-more-indicator,
+.load-more-hint {
+    padding: 15px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+
+.loading-indicator { color: #667eea; }
+.load-more-hint { color: #999; font-size: 12px; }
 
 .data-table {
     width: 100%;

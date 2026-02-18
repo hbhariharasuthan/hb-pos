@@ -28,7 +28,8 @@ class SaleController extends Controller
             $query->where('status', $request->status);
         }
 
-        $sales = $query->orderBy('sale_date', 'desc')->paginate($request->per_page ?? 15);
+        $perPage = $request->input('per_page', 10);
+        $sales = $query->orderBy('sale_date', 'desc')->paginate($perPage);
         return response()->json($sales);
     }
 
