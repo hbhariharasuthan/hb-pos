@@ -5,11 +5,14 @@
                 v-model="localSearch"
                 type="text"
                 :placeholder="placeholder || 'Search...'"
+                @focus="isOpen = true"
+                @click="isOpen = true"
                 class="search-input"
                 @input="handleSearch"
             />
         </div>
         <div
+            v-if="isOpen"
             ref="dropdownList"
             class="dropdown-list"
             @scroll="handleScroll"
@@ -21,13 +24,13 @@
                 No items found
             </div>
             <template v-else>
-                <div
-                    v-for="item in validItems"
-                    :key="getValue(item)"
-                    class="dropdown-item"
-                    :class="{ 'selected': getValue(item) === modelValue }"
-                    @click="selectItem(item)"
-                >
+            <div
+                v-for="item in validItems"
+                :key="getValue(item)"
+                class="dropdown-item"
+                :class="{ selected: getValue(item) === modelValue }"
+                @click="selectItem(item)"
+            >
                     <span class="item-label">{{ getLabel(item) }}</span>
                     <span v-if="getSecondaryLabel(item)" class="item-secondary-label">{{ getSecondaryLabel(item) }}</span>
                 </div>
@@ -88,9 +91,15 @@ export default {
     },
     emits: ['update:modelValue', 'select'],
     setup(props, { emit }) {
+        const {
+        valueKey,
+        labelKey,
+        secondaryLabelKey,
+        placeholder
+        } = props;
         const dropdownList = ref(null);
         const localSearch = ref('');
-
+        const isOpen = ref(false);
         const {
             items,
             loading,
@@ -115,20 +124,33 @@ export default {
 
         // Handle search input
         const handleSearch = (event) => {
-            localSearch.value = event.target.value;
-            search(event.target.value);
+            const value = event?.target?.value ?? event ?? '';
+            localSearch.value = value;
+            search(value);
         };
 
         // Handle scroll for infinite loading
-        const handleScroll = (event) => {
-            const element = event.target;
-            const scrollBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
-            
-            // Load more when within 50px of bottom
-            if (scrollBottom < 50 && hasMore.value && !loading.value) {
-                loadMore();
-            }
-        };
+            const handleScroll = (event) => {
+                const element = event?.target;
+
+                // ✅ guard: ensure this is the dropdown list
+                if (!element || element !== dropdownList.value) return;
+
+                if (
+                    element.scrollHeight <= element.clientHeight ||
+                    loading.value ||
+                    !hasMore.value
+                ) {
+                    return;
+                }
+
+                const scrollBottom =
+                    element.scrollHeight - element.scrollTop - element.clientHeight;
+
+                if (scrollBottom < 10) {
+                    loadMore();
+                }
+            };
 
         // Filter out null/undefined items
         const validItems = computed(() => {
@@ -140,12 +162,12 @@ export default {
 
         // Get value from item (with safety checks)
         const getValue = (item) => {
-            if (item == null) return `null_${Date.now()}_${Math.random()}`;
+            if (!item) return null;
+
             if (typeof item === 'object') {
-                const value = item[props.valueKey];
-                if (value == null) return `null_${Date.now()}_${Math.random()}`;
-                return value;
+                return item[props.valueKey] ?? null;
             }
+
             return item;
         };
 
@@ -156,6 +178,29 @@ export default {
             }
             return String(item);
         };
+
+        /* 🔥 ADD WATCHER HERE */
+        watch(
+            () => props.modelValue,
+            (val) => {
+                if (!val) {
+                    localSearch.value = '';
+                    return;
+                }
+
+                if (typeof val === 'object') {
+                    localSearch.value = getLabel(val);
+                } else {
+                    const found = items.value.find(
+                        i => i[props.valueKey] === val
+                    );
+                    if (found) {
+                        localSearch.value = getLabel(found);
+                    }
+                }
+            },
+            { immediate: true }
+        );
 
         // Get secondary label from item
         const getSecondaryLabel = (item) => {
@@ -168,23 +213,45 @@ export default {
         // Select item
         const selectItem = (item) => {
             const value = getValue(item);
-            emit('update:modelValue', props.emitFullItem ? item : value);
+
+            emit(
+                'update:modelValue',
+                props.emitFullItem ? item : value
+            );
             emit('select', item);
+
+            // ✅ CLOSE DROPDOWN
+            isOpen.value = false;
+        };
+
+        const onClickOutside = (e) => {
+            if (!dropdownList.value?.contains(e.target)) {
+                isOpen.value = false;
+            }
         };
 
         // Initialize on mount
         onMounted(() => {
             loadInitial();
+            document.addEventListener('click', onClickOutside);
+
         });
 
         // Cleanup on unmount
         onUnmounted(() => {
+            document.removeEventListener('click', onClickOutside);
             reset();
+            
         });
 
         return {
+            valueKey,
+            labelKey,
+            secondaryLabelKey,
+            placeholder,
             dropdownList,
             localSearch,
+            isOpen,
             items,
             validItems,
             loading,

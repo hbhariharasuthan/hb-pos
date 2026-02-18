@@ -80,10 +80,15 @@
                             <tbody>
                                 <tr v-for="(row, idx) in form.items" :key="idx">
                                     <td>
-                                        <select v-model="row.product_id" class="form-input" required @change="onProductChange(idx)">
-                                            <option value="">Select product</option>
-                                            <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} ({{ p.sku }})</option>
-                                        </select>
+                                      <PaginatedDropdown
+                                        v-model="row.product_id"
+                                        endpoint="/api/products"
+                                        value-key="id"
+                                        label-key="name"
+                                        secondary-label-key="sku"
+                                        :emit-full-item="true"
+                                        @select="onProductSelect($event, idx)"
+                                    />
                                     </td>
                                     <td>
                                         <input v-model.number="row.quantity" type="number" step="0.001" min="0.001" required class="form-input num" />
@@ -129,9 +134,14 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
+import PaginatedDropdown from '../components/PaginatedDropdown.vue';
+
 
 export default {
     name: 'Purchases',
+     components: {
+        PaginatedDropdown
+    },
     setup() {
         const router = useRouter();
         const showModal = ref(false);
@@ -184,9 +194,29 @@ export default {
             }
         };
 
+        const onProductSelect = (product, idx) => {
+            if (!product || typeof product !== 'object') return;
+
+            const row = form.value.items[idx];
+            if (!row) return;
+
+            row.product_id = product.id;
+            row.unit_cost = Number(product.purchase_price ?? product.cost_price ?? 0);
+            row.quantity = row.quantity || 1;
+
+            recalculateRow(idx);
+        };
+
+        const recalculateRow = (idx) => {
+            const row = form.value.items[idx];
+            if (!row) return;
+
+            row.line_total = Number(row.quantity) * Number(row.unit_cost);
+        };
+
         const loadProductsForModal = async () => {
             try {
-                const r = await axios.get('/api/products', { params: { per_page: 200 } });
+                const r = await axios.get('/api/products', { params: { per_page: 2 } });
                 const data = r.data.data ?? r.data;
                 products.value = Array.isArray(data) ? data.filter(p => p && p.id) : [];
             } catch (e) {
@@ -305,6 +335,11 @@ export default {
             loadPurchases,
             addItem,
             removeItem,
+
+            // ✅ ADD THESE TWO
+            onProductSelect,
+            recalculateRow,
+
             onProductChange,
             savePurchase,
             viewBill,
