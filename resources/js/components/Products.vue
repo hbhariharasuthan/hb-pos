@@ -247,7 +247,12 @@ export default {
 
         const editProduct = (product) => {
             editingProduct.value = product;
-            form.value = { ...product };
+
+            form.value = {
+                ...product,
+                category_id: product.category || null // <-- set category object for dropdown
+            };
+
             showModal.value = true;
         };
 

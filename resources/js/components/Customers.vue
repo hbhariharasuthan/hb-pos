@@ -16,6 +16,7 @@
                         <th>Name</th>
                         <th>Email</th>
                         <th>Phone</th>
+                        <th>GST number</th>
                         <th>Address</th>
                         <th>Balance</th>
                         <th>Actions</th>
@@ -26,6 +27,7 @@
                         <td>{{ customer.name }}</td>
                         <td>{{ customer.email || 'N/A' }}</td>
                         <td>{{ customer.phone || 'N/A' }}</td>
+                        <td>{{ customer.gst_number || 'N/A' }}</td>
                         <td>{{ customer.address || 'N/A' }}</td>
                         <td>₹{{ customer.balance }}</td>
                         <td>
@@ -73,6 +75,10 @@
                         <label>Address</label>
                         <input v-model="form.address" type="text" />
                     </div>
+                     <div class="form-group">
+                            <label>GST Number</label>
+                            <input v-model="form.gst_number" type="text" />
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>City</label>
@@ -112,6 +118,7 @@ export default {
             name: '',
             email: '',
             phone: '',
+            gst_number: '',
             address: '',
             city: '',
             state: '',

@@ -39,6 +39,12 @@ class CustomerController extends Controller
                 'name' => 'required|string|max:255',
                 'email' => 'nullable|email|unique:customers,email',
                 'phone' => 'nullable|string|max:20',
+                'gst_number' => [
+                    'nullable',
+                    'string',
+                    'size:15',
+                    'unique:customers,gst_number'
+                ],
                 'address' => 'nullable|string',
                 'city' => 'nullable|string|max:100',
                 'state' => 'nullable|string|max:100',
@@ -72,6 +78,12 @@ class CustomerController extends Controller
                 'name' => 'sometimes|required|string|max:255',
                 'email' => 'nullable|email|unique:customers,email,' . $id,
                 'phone' => 'nullable|string|max:20',
+                'gst_number' => [
+                                    'nullable',
+                                    'string',
+                                    'size:15',
+                                    'unique:customers,gst_number,' . $id
+                                ],
                 'address' => 'nullable|string',
                 'city' => 'nullable|string|max:100',
                 'state' => 'nullable|string|max:100',
