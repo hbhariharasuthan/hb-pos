@@ -11,6 +11,7 @@
                 <router-link to="/products">Products</router-link>
                 <router-link to="/categories">Categories</router-link>
                 <router-link to="/inventory">Inventory</router-link>
+                <router-link to="/purchases">Purchases</router-link>
                 <router-link to="/customers">Customers</router-link>
                 <router-link to="/sales">Sales</router-link>
                 <router-link to="/reports">Reports</router-link>

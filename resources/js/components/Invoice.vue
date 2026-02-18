@@ -58,10 +58,16 @@
                         <span>Subtotal:</span>
                         <span>₹{{ sale?.subtotal }}</span>
                     </div>
-                    <div class="summary-row">
-                        <span>Tax ({{ sale?.tax_rate }}%):</span>
-                        <span>₹{{ sale?.tax_amount }}</span>
-                    </div>
+                    <template v-if="sale?.tax_amount > 0">
+                        <div class="summary-row">
+                            <span>CGST ({{ ((sale?.tax_rate || 0) / 2).toFixed(1) }}%):</span>
+                            <span>₹{{ ((sale?.tax_amount || 0) / 2).toFixed(2) }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>SGST ({{ ((sale?.tax_rate || 0) / 2).toFixed(1) }}%):</span>
+                            <span>₹{{ ((sale?.tax_amount || 0) / 2).toFixed(2) }}</span>
+                        </div>
+                    </template>
                     <div class="summary-row" v-if="sale?.discount > 0">
                         <span>Discount:</span>
                         <span>-₹{{ sale?.discount }}</span>
@@ -213,7 +219,10 @@ export default {
                         <span>₹${saleData.subtotal}</span>
                     </div>
                     ${saleData.discount > 0 ? `<div class="row"><span>Discount:</span><span>-₹${saleData.discount}</span></div>` : ''}
-                    ${saleData.tax_amount > 0 ? `<div class="row"><span>Tax:</span><span>₹${saleData.tax_amount}</span></div>` : ''}
+                    ${saleData.tax_amount > 0 ? `
+                    <div class="row"><span>CGST (${(parseFloat(saleData.tax_rate || 0) / 2).toFixed(1)}%):</span><span>₹${(parseFloat(saleData.tax_amount) / 2).toFixed(2)}</span></div>
+                    <div class="row"><span>SGST (${(parseFloat(saleData.tax_rate || 0) / 2).toFixed(1)}%):</span><span>₹${(parseFloat(saleData.tax_amount) / 2).toFixed(2)}</span></div>
+                    ` : ''}
                     <div class="row total-row">
                         <span>TOTAL:</span>
                         <span>₹${saleData.total}</span>

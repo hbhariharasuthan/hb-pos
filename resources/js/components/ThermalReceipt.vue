@@ -62,10 +62,16 @@
                 <span class="label">Discount:</span>
                 <span class="value">-₹{{ sale.discount }}</span>
             </div>
-            <div v-if="sale.tax_amount > 0" class="receipt-row">
-                <span class="label">Tax ({{ sale.tax_rate }}%):</span>
-                <span class="value">₹{{ sale.tax_amount }}</span>
-            </div>
+            <template v-if="sale.tax_amount > 0">
+                <div class="receipt-row">
+                    <span class="label">CGST ({{ ((sale.tax_rate || 0) / 2).toFixed(1) }}%):</span>
+                    <span class="value">₹{{ ((sale.tax_amount || 0) / 2).toFixed(2) }}</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="label">SGST ({{ ((sale.tax_rate || 0) / 2).toFixed(1) }}%):</span>
+                    <span class="value">₹{{ ((sale.tax_amount || 0) / 2).toFixed(2) }}</span>
+                </div>
+            </template>
             <div class="receipt-row total-row">
                 <span class="label">TOTAL:</span>
                 <span class="value">₹{{ sale.total }}</span>

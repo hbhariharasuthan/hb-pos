@@ -12,6 +12,8 @@ import Customers from './components/Customers.vue';
 import Sales from './components/Sales.vue';
 import Invoice from './components/Invoice.vue';
 import Inventory from './components/Inventory.vue';
+import Purchases from './components/Purchases.vue';
+import PurchaseBill from './components/PurchaseBill.vue';
 import Reports from './components/Reports.vue';
 import { useAuthStore } from './stores/auth';
 
@@ -27,6 +29,8 @@ const routes = [
     { path: '/sales', component: Sales, meta: { requiresAuth: true } },
     { path: '/sales/:id/invoice', component: Invoice, meta: { requiresAuth: true } },
     { path: '/inventory', component: Inventory, meta: { requiresAuth: true } },
+    { path: '/purchases', component: Purchases, meta: { requiresAuth: true } },
+    { path: '/purchases/:id/bill', component: PurchaseBill, meta: { requiresAuth: true } },
     { path: '/reports', component: Reports, meta: { requiresAuth: true } },
 ];
 

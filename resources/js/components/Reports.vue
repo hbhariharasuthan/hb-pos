@@ -193,6 +193,14 @@
                     <h3>Card Sales</h3>
                     <p>₹{{ salesReport.stats.card_sales.toFixed(2) }}</p>
                 </div>
+                <div class="stat-card">
+                    <h3>Total CGST</h3>
+                    <p>₹{{ (salesReport.stats.total_cgst || 0).toFixed(2) }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total SGST</h3>
+                    <p>₹{{ (salesReport.stats.total_sgst || 0).toFixed(2) }}</p>
+                </div>
             </div>
 
             <div class="table-container">
@@ -205,7 +213,8 @@
                             <th>Customer</th>
                             <th>Items</th>
                             <th>Subtotal</th>
-                            <th>Tax</th>
+                            <th>CGST</th>
+                            <th>SGST</th>
                             <th>Discount</th>
                             <th>Total</th>
                             <th>Payment</th>
@@ -218,7 +227,8 @@
                             <td>{{ sale.customer?.name || 'Walk-in' }}</td>
                             <td>{{ sale.items?.length || 0 }}</td>
                             <td>₹{{ sale.subtotal }}</td>
-                            <td>₹{{ sale.tax_amount }}</td>
+                            <td>₹{{ reportCgst(sale).toFixed(2) }}</td>
+                            <td>₹{{ reportSgst(sale).toFixed(2) }}</td>
                             <td>₹{{ sale.discount }}</td>
                             <td>₹{{ sale.total }}</td>
                             <td>{{ sale.payment_method }}</td>
@@ -316,9 +326,11 @@ export default {
                     csv += `"${formatDate(m.created_at)}","${m.product?.name || 'N/A'}","${m.type.toUpperCase()}","${m.quantity}","${m.unit_cost || 'N/A'}","${m.user?.name || 'System'}","${(m.notes || '').replace(/"/g, '""')}"\n`;
                 });
             } else if (reportType.value === 'sales' && salesReport.value) {
-                csv = 'Invoice #,Date,Customer,Items,Subtotal,Tax,Discount,Total,Payment\n';
+                csv = 'Invoice #,Date,Customer,Items,Subtotal,CGST,SGST,Discount,Total,Payment\n';
                 salesReport.value.sales.forEach(s => {
-                    csv += `"${s.invoice_number}","${formatDate(s.sale_date)}","${s.customer?.name || 'Walk-in'}","${s.items?.length || 0}","${s.subtotal}","${s.tax_amount}","${s.discount}","${s.total}","${s.payment_method}"\n`;
+                    const cgst = (parseFloat(s.tax_amount) || 0) / 2;
+                    const sgst = (parseFloat(s.tax_amount) || 0) / 2;
+                    csv += `"${s.invoice_number}","${formatDate(s.sale_date)}","${s.customer?.name || 'Walk-in'}","${s.items?.length || 0}","${s.subtotal}","${cgst.toFixed(2)}","${sgst.toFixed(2)}","${s.discount}","${s.total}","${s.payment_method}"\n`;
                 });
             }
 
@@ -362,6 +374,9 @@ export default {
             return new Date(date).toLocaleDateString();
         };
 
+        const reportCgst = (sale) => (parseFloat(sale?.tax_amount) || 0) / 2;
+        const reportSgst = (sale) => (parseFloat(sale?.tax_amount) || 0) / 2;
+
         const formatReportQty = (qty, unit) => {
             if (qty === null || qty === undefined) return '0';
             const n = parseFloat(qty);
@@ -384,6 +399,8 @@ export default {
             filters,
             loadReport,
             exportReport,
+            reportCgst,
+            reportSgst,
             getProductStatus,
             getProductStatusClass,
             getMovementTypeClass,

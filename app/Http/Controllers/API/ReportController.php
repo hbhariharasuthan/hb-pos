@@ -143,6 +143,8 @@ class ReportController extends Controller
             'card_sales' => $sales->where('payment_method', 'card')->sum('total'),
             'credit_sales' => $sales->where('payment_method', 'credit')->sum('total'),
             'total_tax' => $sales->sum('tax_amount'),
+            'total_cgst' => $sales->sum('tax_amount') / 2,
+            'total_sgst' => $sales->sum('tax_amount') / 2,
             'total_discount' => $sales->sum('discount'),
         ];
 

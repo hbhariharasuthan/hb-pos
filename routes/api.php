@@ -9,6 +9,7 @@ use App\Http\Controllers\API\SaleController;
 use App\Http\Controllers\API\StockController;
 use App\Http\Controllers\API\ReturnController;
 use App\Http\Controllers\API\ReportController;
+use App\Http\Controllers\API\PurchaseController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -39,6 +40,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sales
     Route::apiResource('sales', SaleController::class);
     Route::get('/sales/{id}/invoice', [SaleController::class, 'getInvoice']);
+
+    // Purchases (inventory purchase bills)
+    Route::get('/purchases/{id}/bill', [PurchaseController::class, 'getBill']);
+    Route::apiResource('purchases', PurchaseController::class)->only(['index', 'store', 'show']);
 
     // Stock / Inventory
     Route::get('/stock/movements', [StockController::class, 'index']);

@@ -16,30 +16,41 @@
                         type="text"
                         placeholder="Search products by name, SKU, or barcode..."
                         class="search-input"
-                        @input="searchProducts"
+                        @input="onSearchInput"
                     />
                 </div>
 
-                <div class="products-grid">
-                    <div
-                        v-for="product in (products || []).filter(p => p != null && p.id != null)"
-                        :key="product.id"
-                        class="product-card"
-                        :class="{ 'low-stock': product.stock_quantity <= product.min_stock_level }"
-                        @click="addToCart(product)"
-                    >
-                        <div class="product-info">
-                            <h3>{{ product.name }}</h3>
-                            <p class="product-sku">SKU: {{ product.sku }}</p>
-                            <p class="product-price">₹{{ product.selling_price }}</p>
-                            <p class="product-stock">Stock: {{ formatQty(product.stock_quantity, product.unit) }}</p>
-                        </div>
-                        <div v-if="product.stock_quantity <= product.min_stock_level" class="low-stock-tooltip">
-                            ⚠️ Low Stock Alert<br>
-                            Current: {{ product.stock_quantity }}<br>
-                            Minimum: {{ product.min_stock_level }}
+                <div ref="gridContainer" class="products-grid-wrapper" @scroll="handleScroll">
+                    <div class="products-grid">
+                        <div
+                            v-for="product in filteredProducts"
+                            :key="product.id"
+                            class="product-card"
+                            :class="{ 'low-stock': product.stock_quantity <= product.min_stock_level }"
+                            @click="addToCart(product)"
+                        >
+                            <div class="product-info">
+                                <h3>{{ product.name }}</h3>
+                                <p class="product-sku">SKU: {{ product.sku }}</p>
+                                <p class="product-price">₹{{ product.selling_price }}</p>
+                                <p class="product-stock">Stock: {{ formatQty(product.stock_quantity, product.unit) }}</p>
+                            </div>
+                            <div v-if="product.stock_quantity <= product.min_stock_level" class="low-stock-tooltip">
+                                ⚠️ Low Stock Alert<br>
+                                Current: {{ product.stock_quantity }}<br>
+                                Minimum: {{ product.min_stock_level }}
+                            </div>
                         </div>
                     </div>
+                    <div
+                        ref="loadMoreTrigger"
+                        v-if="hasMore"
+                        class="load-more-trigger"
+                    >
+                        <div v-if="loading" class="loading-indicator">Loading more products...</div>
+                        <div v-else class="load-more-hint">Scroll for more</div>
+                    </div>
+                    <div v-if="!hasMore && filteredProducts.length > 0" class="no-more-indicator">No more products to load</div>
                 </div>
             </div>
 
@@ -81,6 +92,16 @@
                         <label>Tax Rate (%):</label>
                         <input v-model.number="taxRate" type="number" min="0" max="100" class="input-small" />
                     </div>
+                    <template v-if="taxAmount > 0">
+                        <div class="summary-row">
+                            <span>CGST ({{ cgstRate.toFixed(1) }}%):</span>
+                            <span>₹{{ cgstAmount.toFixed(2) }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>SGST ({{ sgstRate.toFixed(1) }}%):</span>
+                            <span>₹{{ sgstAmount.toFixed(2) }}</span>
+                        </div>
+                    </template>
                     <div class="summary-row">
                         <label>Discount:</label>
                         <input v-model.number="discount" type="number" min="0" class="input-small" />
@@ -157,9 +178,10 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import PaginatedDropdown from './PaginatedDropdown.vue';
+import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 
 export default {
     name: 'POS',
@@ -167,7 +189,6 @@ export default {
         PaginatedDropdown
     },
     setup() {
-        const products = ref([]);
         const cart = ref([]);
         const searchQuery = ref('');
         const taxRate = ref(0);
@@ -185,6 +206,27 @@ export default {
             email: ''
         });
 
+        const {
+            items: products,
+            loading,
+            hasMore,
+            loadInitial,
+            loadMore,
+            search: searchProducts
+        } = usePaginatedDropdown('/api/pos/products', {
+            searchParam: 'search',
+            initialFilters: {},
+            perPage: 20
+        });
+
+        watch(searchQuery, (v) => searchProducts(v));
+
+        const filteredProducts = computed(() => (products.value || []).filter(p => p != null && p.id != null));
+
+        const onSearchInput = () => {
+            searchProducts(searchQuery.value);
+        };
+
         const subtotal = computed(() => {
             return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         });
@@ -193,11 +235,15 @@ export default {
             return (subtotal.value - discount.value) * (taxRate.value / 100);
         });
 
+        const cgstRate = computed(() => (taxRate.value || 0) / 2);
+        const sgstRate = computed(() => (taxRate.value || 0) / 2);
+        const cgstAmount = computed(() => (taxAmount.value || 0) / 2);
+        const sgstAmount = computed(() => (taxAmount.value || 0) / 2);
+
         const total = computed(() => {
             return subtotal.value - discount.value + taxAmount.value;
         });
 
-        // Handle customer selection from PaginatedDropdown
         const handleCustomerSelect = (customer) => {
             if (!customer) {
                 selectCustomer(null);
@@ -206,31 +252,24 @@ export default {
             selectCustomer(customer);
         };
 
-        const loadProducts = async () => {
-            try {
-                const response = await axios.get('/api/pos/products');
-                const data = response.data;
-                // Filter out null/undefined items to prevent errors
-                products.value = Array.isArray(data) 
-                    ? data.filter(product => product != null && product.id != null)
-                    : [];
-            } catch (error) {
-                console.error('Error loading products:', error);
-                products.value = [];
-            }
+        const scrollObserver = ref(null);
+        const loadMoreTrigger = ref(null);
+        const gridContainer = ref(null);
+
+        const setupScrollObserver = () => {
+            if (typeof IntersectionObserver === 'undefined' || !gridContainer.value || !loadMoreTrigger.value) return;
+            scrollObserver.value = new IntersectionObserver(
+                (entries) => {
+                    if (entries[0].isIntersecting && hasMore.value && !loading.value) loadMore();
+                },
+                { root: gridContainer.value, rootMargin: '80px', threshold: 0.1 }
+            );
+            scrollObserver.value.observe(loadMoreTrigger.value);
         };
 
-        // Removed loadCustomers - now handled by PaginatedDropdown component
-
-        const searchProducts = async () => {
-            try {
-                const response = await axios.get('/api/pos/products', {
-                    params: { search: searchQuery.value }
-                });
-                products.value = response.data;
-            } catch (error) {
-                console.error('Error searching products:', error);
-            }
+        const handleScroll = (e) => {
+            const el = e.target;
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < 120 && hasMore.value && !loading.value) loadMore();
         };
 
         const isWeightUnit = (unit) => {
@@ -450,7 +489,10 @@ export default {
                         <span>₹${parseFloat(saleData.subtotal).toFixed(2)}</span>
                     </div>
                     ${saleData.discount > 0 ? `<div class="row"><span>Discount:</span><span>-₹${parseFloat(saleData.discount).toFixed(2)}</span></div>` : ''}
-                    ${saleData.tax_amount > 0 ? `<div class="row"><span>Tax (${saleData.tax_rate}%):</span><span>₹${parseFloat(saleData.tax_amount).toFixed(2)}</span></div>` : ''}
+                    ${saleData.tax_amount > 0 ? `
+                    <div class="row"><span>CGST (${(parseFloat(saleData.tax_rate || 0) / 2).toFixed(1)}%):</span><span>₹${(parseFloat(saleData.tax_amount) / 2).toFixed(2)}</span></div>
+                    <div class="row"><span>SGST (${(parseFloat(saleData.tax_rate || 0) / 2).toFixed(1)}%):</span><span>₹${(parseFloat(saleData.tax_amount) / 2).toFixed(2)}</span></div>
+                    ` : ''}
                     <div class="row total-row">
                         <span>TOTAL:</span>
                         <span>₹${parseFloat(saleData.total).toFixed(2)}</span>
@@ -582,13 +624,24 @@ export default {
         };
 
         onMounted(() => {
-            loadProducts();
+            loadInitial();
+            setTimeout(() => setupScrollObserver(), 100);
+        });
+
+        watch([loadMoreTrigger, gridContainer], () => {
+            if (loadMoreTrigger.value && gridContainer.value) setupScrollObserver();
         });
 
         return {
-            products,
+            filteredProducts,
             cart,
             searchQuery,
+            loading,
+            hasMore,
+            handleScroll,
+            gridContainer,
+            loadMoreTrigger,
+            onSearchInput,
             taxRate,
             discount,
             paymentMethod,
@@ -601,8 +654,11 @@ export default {
             showReceipt,
             subtotal,
             taxAmount,
+            cgstRate,
+            sgstRate,
+            cgstAmount,
+            sgstAmount,
             total,
-            searchProducts,
             addToCart,
             updateQuantity,
             removeFromCart,
@@ -661,7 +717,9 @@ export default {
     background: white;
     border-radius: 8px;
     padding: 20px;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .pos-right {
@@ -684,10 +742,40 @@ export default {
     font-size: 16px;
 }
 
+.products-grid-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
 .products-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 15px;
+}
+
+.load-more-trigger {
+    min-height: 50px;
+    padding: 15px;
+    text-align: center;
+}
+
+.loading-indicator,
+.no-more-indicator,
+.load-more-hint {
+    padding: 15px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+
+.loading-indicator {
+    color: #667eea;
+}
+
+.load-more-hint {
+    color: #999;
+    font-size: 12px;
 }
 
 .product-card {

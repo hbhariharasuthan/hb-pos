@@ -27,4 +27,9 @@ class Customer extends Model
     {
         return $this->hasMany(ReturnModel::class);
     }
+
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(Purchase::class, 'supplier_id');
+    }
 }
