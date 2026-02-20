@@ -1,18 +1,73 @@
 {
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "dev": "vite",
-        "build": "vite build"
+  "name": "hb-pos",
+  "version": "1.0.0",
+  "description": "A comprehensive Point of Sale (POS) and Inventory Management System",
+  "private": true,
+
+  "main": "electron/main.js",
+
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "electron": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win"
+  },
+
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.5.0",
+    "axios": "^1.1.2",
+    "electron": "^40.6.0",
+    "electron-builder": "^26.8.1",
+    "laravel-vite-plugin": "^0.8.0",
+    "vite": "^4.0.0"
+  },
+
+  "dependencies": {
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.5"
+  },
+
+  "build": {
+    "appId": "com.hb.pos",
+    "productName": "HB POS",
+    "asar": false,
+
+    "directories": {
+      "output": "dist"
     },
-    "devDependencies": {
-        "@vitejs/plugin-vue": "^4.5.0",
-        "axios": "^1.1.2",
-        "laravel-vite-plugin": "^0.8.0",
-        "vite": "^4.0.0"
+
+    "files": [
+      "**/*",
+      "!node_modules/**/*",
+      "!storage/logs/**/*",
+      "!storage/framework/cache/**/*"
+    ],
+
+    "extraResources": [
+      {
+        "from": "electron/php",
+        "to": "php"
+      },
+      {
+        "from": "electron/mysql",
+        "to": "mysql"
+      }
+    ],
+
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.business"
     },
-    "dependencies": {
-        "vue": "^3.3.4",
-        "vue-router": "^4.2.5"
+
+    "win": {
+      "target": "nsis"
+    },
+
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
     }
+  }
 }
