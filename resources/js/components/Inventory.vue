@@ -3,7 +3,7 @@
         <div class="page-header">
             <h1>Inventory Management</h1>
             <div class="header-actions">
-                <button @click="showAdjustModal = true" class="btn btn-primary">Adjust Stock</button>
+                <!-- button @click="showAdjustModal = true" class="btn btn-primary">Adjust Stock</button -->
                 <button @click="loadLowStock" class="btn btn-warning">Low Stock Alerts</button>
             </div>
         </div>
@@ -88,7 +88,7 @@
                             </span>
                         </td>
                         <td>
-                            <button @click="adjustStock(product)" class="btn-sm btn-primary">Adjust</button>
+                            <!--button @click="adjustStock(product)" class="btn-sm btn-primary">Adjust</button -->
                             <button @click="viewHistory(product)" class="btn-sm btn-info">History</button>
                         </td>
                     </tr>
