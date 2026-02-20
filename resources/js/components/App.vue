@@ -1,6 +1,6 @@
 <template>
     <div id="app">
-        <nav v-if="isAuthenticated && $route.path !== '/pos'" class="main-nav">
+        <nav v-if="isAuthenticated" class="main-nav">
             <div class="nav-brand">
                 <img src="/logo.png" alt="HB Logo" class="logo-img" />
                 <span class="brand-text">HB POS System</span>
