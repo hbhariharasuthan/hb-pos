@@ -1,8 +1,28 @@
 const { app, BrowserWindow } = require('electron');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const path = require('path');
+const net = require('net');
 
 let phpProcess;
+
+/**
+ * Wait until Laravel PHP server is ready
+ */
+function waitForServer(port, callback) {
+  const interval = setInterval(() => {
+    const socket = net.createConnection(port, '127.0.0.1');
+
+    socket.on('connect', () => {
+      clearInterval(interval);
+      socket.end();
+      callback();
+    });
+
+    socket.on('error', () => {
+      socket.destroy();
+    });
+  }, 300);
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -17,13 +37,33 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  // ✅ SET PHP PATH BASED ON OS
-  const phpPath =
-    process.platform === 'darwin'
-      ? '/Applications/MAMP/bin/php/php8.4.15/bin/php'
-      : path.join(process.resourcesPath, 'php', 'php.exe'); // for Windows build
+  let phpPath;
 
-  // ✅ LARAVEL PUBLIC DIRECTORY
+  /* =========================
+     macOS → MAMP
+  ========================== */
+  if (process.platform === 'darwin') {
+    phpPath = '/Applications/MAMP/bin/php/php8.4.15/bin/php';
+
+    // Ensure MySQL is running (MAMP)
+    exec('/Applications/MAMP/bin/startMysql.sh');
+
+  /* =========================
+     Windows → XAMPP
+  ========================== */
+  } else if (process.platform === 'win32') {
+    phpPath = 'C:\\xampp\\php\\php.exe';
+
+    // Start Apache & MySQL as services
+    exec('net start Apache2.4', () => {});
+    exec('net start mysql', () => {});
+  } else {
+    throw new Error('Unsupported OS');
+  }
+
+  /* =========================
+     Start Laravel PHP Server
+  ========================== */
   const publicPath = path.join(__dirname, '..', 'public');
 
   phpProcess = spawn(phpPath, [
@@ -31,22 +71,15 @@ app.whenReady().then(() => {
     '127.0.0.1:8000',
     '-t',
     publicPath
-  ]);
-
-  phpProcess.stdout.on('data', (data) => {
-    console.log(`PHP: ${data}`);
+  ], {
+    windowsHide: true
   });
 
-  phpProcess.stderr.on('data', (data) => {
-    console.error(`PHP ERROR: ${data}`);
-  });
+  phpProcess.stdout.on('data', d => console.log(`PHP: ${d}`));
+  phpProcess.stderr.on('data', d => console.error(`PHP ERROR: ${d}`));
+  phpProcess.on('error', err => console.error('PHP failed:', err));
 
-  phpProcess.on('error', (err) => {
-    console.error('Failed to start PHP:', err);
-  });
-
-  // ⏳ WAIT FOR PHP SERVER
-  setTimeout(createWindow, 1500);
+  waitForServer(8000, createWindow);
 });
 
 app.on('window-all-closed', () => {
