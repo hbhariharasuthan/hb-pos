@@ -10,6 +10,7 @@
                 <router-link to="/pos">POS</router-link>
                 <router-link to="/products">Products</router-link>
                 <router-link to="/categories">Categories</router-link>
+                <router-link to="/brands">Brands</router-link>
                 <router-link to="/inventory">Inventory</router-link>
                 <router-link to="/purchases">Purchases</router-link>
                 <router-link to="/customers">Customers</router-link>

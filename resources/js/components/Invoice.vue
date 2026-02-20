@@ -27,6 +27,7 @@
                     <p><strong>{{ sale?.customer?.name || 'Walk-in Customer' }}</strong></p>
                     <p v-if="sale?.customer?.email">{{ sale.customer.email }}</p>
                     <p v-if="sale?.customer?.phone">{{ sale.customer.phone }}</p>
+                    <p v-if="sale?.customer?.gst_number">GST: {{ sale.customer.gst_number }}</p>
                     <p v-if="sale?.customer?.address">{{ sale.customer.address }}</p>
                 </div>
 
@@ -211,6 +212,7 @@ export default {
                         <span>${date}</span>
                     </div>
                     ${saleData.customer ? `<div class="row"><span>Customer:</span><span>${saleData.customer.name}</span></div>` : ''}
+                    ${saleData.customer?.gst_number ? `<div class="row"><span>GST:</span><span>${saleData.customer.gst_number}</span></div>` : ''}
                     <div class="divider"></div>
                     ${itemsHTML}
                     <div class="divider"></div>

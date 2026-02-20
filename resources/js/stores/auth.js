@@ -37,7 +37,7 @@ const authStore = reactive({
         
         try {
             const response = await axios.get('/api/user');
-            this.user = response.data.user;
+            this.user = response.data?.user ?? null;
             return true;
         } catch (error) {
             this.clearAuth();

@@ -6,6 +6,12 @@
         </div>
 
         <div class="filters">
+            <input
+                v-model="search"
+                type="text"
+                placeholder="Search by bill #, supplier, amount..."
+                class="search-input"
+            />
             <input v-model="dateFrom" type="date" class="date-input" />
             <input v-model="dateTo" type="date" class="date-input" />
             <button @click="loadPurchases" class="btn btn-secondary">Filter</button>
@@ -26,7 +32,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="p in filteredPurchases" :key="p.id">
+                    <tr v-for="(p, idx) in filteredPurchases" :key="p?.id ?? `purchase-${idx}`">
                         <td>{{ p.bill_number }}</td>
                         <td>{{ formatDate(p.purchase_date) }}</td>
                         <td>{{ p.supplier?.name || '—' }}</td>
@@ -152,6 +158,7 @@ export default {
         const saving = ref(false);
         const dateFrom = ref('');
         const dateTo = ref('');
+        const search = ref('');
         const suppliers = ref([]);
         const products = ref([]);
 
@@ -161,7 +168,8 @@ export default {
             hasMore,
             loadInitial,
             loadMore,
-            applyFilters
+            applyFilters,
+            search: searchPurchases
         } = usePaginatedDropdown('/api/purchases', {
             searchParam: 'search',
             initialFilters: {},
@@ -176,6 +184,10 @@ export default {
         });
 
         const filteredPurchases = computed(() => (purchases.value || []).filter(p => p != null && p.id != null));
+
+        watch(search, (value) => {
+            searchPurchases(value || '');
+        });
 
         const form = ref({
             supplier_id: '',
@@ -325,6 +337,7 @@ export default {
         return {
             showModal,
             saving,
+            search,
             dateFrom,
             dateTo,
             form,
@@ -356,8 +369,8 @@ export default {
 <style scoped>
 .purchases-container { padding: 20px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.filters { display: flex; gap: 15px; margin-bottom: 20px; }
-.date-input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+.filters { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+.search-input, .date-input { padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; }
 .table-container { background: white; border-radius: 8px; overflow-y: auto; max-height: calc(100vh - 250px); }
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th { background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; }

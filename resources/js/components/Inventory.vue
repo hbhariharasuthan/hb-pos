@@ -14,6 +14,10 @@
                 <option value="">All Categories</option>
                 <option v-for="cat in (categories || []).filter(c => c != null && c.id != null)" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
+            <select v-model="brandFilter" class="select-input">
+                <option value="">All Brands</option>
+                <option v-for="brand in (brands || []).filter(b => b != null && b.id != null)" :key="brand.id" :value="brand.id">{{ brand.name }}</option>
+            </select>
             <select v-model="stockFilter" class="select-input">
                 <option value="">All Stock Levels</option>
                 <option value="low">Low Stock</option>
@@ -61,6 +65,7 @@
                         <th>Product</th>
                         <th>SKU</th>
                         <th>Category</th>
+                        <th>Brand</th>
                         <th>Current Stock</th>
                         <th>Min Level</th>
                         <th>Unit Cost</th>
@@ -70,12 +75,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="product in filteredProducts" :key="product.id">
+                    <tr v-for="(product, idx) in filteredProducts" :key="product?.id ?? `product-${idx}`">
                         <td>
                             <strong>{{ product.name }}</strong>
                         </td>
                         <td>{{ product.sku }}</td>
                         <td>{{ product.category?.name || 'N/A' }}</td>
+                        <td>{{ product.brand?.name || 'N/A' }}</td>
                         <td :class="getStockClass(product)">
                             {{ formatQty(product.stock_quantity, product.unit) }}
                         </td>
@@ -221,11 +227,13 @@ export default {
     setup() {
         const products = ref([]); // for modal dropdown only
         const categories = ref([]);
+        const brands = ref([]);
         const stats = ref({ totalProducts: 0, inStock: 0, lowStock: 0, outOfStock: 0, total_value: 0 });
         const stockHistory = ref([]);
         const lowStockProducts = ref([]);
         const search = ref('');
         const categoryFilter = ref('');
+        const brandFilter = ref('');
         const stockFilter = ref('');
         const showAdjustModal = ref(false);
         const showHistoryModal = ref(false);
@@ -257,6 +265,7 @@ export default {
 
         watch(search, (v) => searchProducts(v));
         watch(categoryFilter, (v) => updateFilter('category_id', v || null));
+        watch(brandFilter, (v) => updateFilter('brand_id', v || null));
         watch(stockFilter, (v) => {
             const stockFilters = { low_stock: null, out_of_stock: null, in_stock_only: null };
             if (v === 'low') stockFilters.low_stock = 1;
@@ -302,6 +311,19 @@ export default {
             } catch (error) {
                 console.error('Error loading categories:', error);
                 categories.value = [];
+            }
+        };
+
+        const loadBrands = async () => {
+            try {
+                const response = await axios.get('/api/brands/all');
+                const data = response.data.data || response.data;
+                brands.value = Array.isArray(data)
+                    ? data.filter(brand => brand != null && brand.id != null)
+                    : [];
+            } catch (error) {
+                console.error('Error loading brands:', error);
+                brands.value = [];
             }
         };
 
@@ -479,6 +501,7 @@ export default {
         onMounted(() => {
             loadInventory();
             loadCategories();
+            loadBrands();
             setTimeout(() => setupScrollObserver(), 100);
         });
 
@@ -489,6 +512,7 @@ export default {
         return {
             products,
             categories,
+            brands,
             loading,
             hasMore,
             handleScroll,
@@ -498,6 +522,7 @@ export default {
             lowStockProducts,
             search,
             categoryFilter,
+            brandFilter,
             stockFilter,
             showAdjustModal,
             showHistoryModal,

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\API\ProductController;
+use App\Http\Controllers\API\BrandController;
 use App\Http\Controllers\API\CategoryController;
 use App\Http\Controllers\API\CustomerController;
 use App\Http\Controllers\API\POSController;
@@ -25,6 +26,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Categories
     Route::get('/categories/all', [CategoryController::class, 'index'])->name('categories.all');
     Route::apiResource('categories', CategoryController::class);
+
+    // Brands
+    Route::get('/brands/all', [BrandController::class, 'index'])->name('brands.all');
+    Route::apiResource('brands', BrandController::class);
 
     // Products
     Route::apiResource('products', ProductController::class);
@@ -60,4 +65,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/products', [ReportController::class, 'productReport']);
     Route::get('/reports/inventory', [ReportController::class, 'inventoryReport']);
     Route::get('/reports/sales', [ReportController::class, 'salesReport']);
+    Route::get('/reports/purchases', [ReportController::class, 'purchaseReport']);
 });

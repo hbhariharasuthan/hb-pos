@@ -52,6 +52,13 @@ class Sale extends Model
                 $sale->invoice_number = static::generateInvoiceNumber();
             }
         });
+
+        static::created(function ($sale) {
+            // Automatically increase customer balance for credit sales
+            if ($sale->customer_id && $sale->payment_method === 'credit') {
+                $sale->customer()->increment('balance', $sale->total);
+            }
+        });
     }
 
     public static function generateInvoiceNumber(): string

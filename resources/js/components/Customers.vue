@@ -23,7 +23,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="customer in filteredCustomers" :key="customer.id">
+                    <tr v-for="(customer, idx) in filteredCustomers" :key="customer?.id ?? `customer-${idx}`">
                         <td>{{ customer.name }}</td>
                         <td>{{ customer.email || 'N/A' }}</td>
                         <td>{{ customer.phone || 'N/A' }}</td>
@@ -93,6 +93,10 @@
                         <label>Credit Limit</label>
                         <input v-model.number="form.credit_limit" type="number" step="0.01" />
                     </div>
+                    <div class="form-group" v-if="!editingCustomer">
+                        <label>Opening Balance *</label>
+                        <input v-model.number="form.opening_balance" type="number" step="0.01" min="0" required />
+                    </div>
                     <div class="form-actions">
                         <button type="button" @click="showModal = false" class="btn btn-secondary">Cancel</button>
                         <button type="submit" class="btn btn-primary">Save</button>
@@ -125,6 +129,7 @@ export default {
             postal_code: '',
             country: '',
             credit_limit: 0,
+            opening_balance: 0,
             is_active: true
         });
 
@@ -233,12 +238,14 @@ export default {
                 name: '',
                 email: '',
                 phone: '',
+                gst_number: '',
                 address: '',
                 city: '',
                 state: '',
                 postal_code: '',
                 country: '',
                 credit_limit: 0,
+                opening_balance: 0,
                 is_active: true
             };
             editingCustomer.value = null;

@@ -8,6 +8,7 @@
                     <option value="products">Product Report</option>
                     <option value="inventory">Inventory Report</option>
                     <option value="sales">Sales Report</option>
+                    <option value="purchases">Purchase Report</option>
                 </select>
             </div>
         </div>
@@ -16,6 +17,12 @@
         <div class="filters" v-if="reportType !== 'dashboard'">
             <input v-model="filters.date_from" type="date" class="date-input" placeholder="From Date" />
             <input v-model="filters.date_to" type="date" class="date-input" placeholder="To Date" />
+            <input
+                v-model="reportSearch"
+                type="text"
+                class="search-input"
+                placeholder="Search in current report..."
+            />
             <button @click="loadReport" class="btn btn-primary">Apply Filters</button>
             <button @click="exportReport" class="btn btn-secondary">Export</button>
         </div>
@@ -87,6 +94,7 @@
                             <th>Product</th>
                             <th>SKU</th>
                             <th>Category</th>
+                            <th>Brand</th>
                             <th>Stock</th>
                             <th>Cost Price</th>
                             <th>Value</th>
@@ -94,10 +102,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="product in (productReport?.products || []).filter(p => p != null && p.id != null)" :key="product.id">
+                        <tr v-for="(product, idx) in filteredProductRows" :key="product?.id ?? `product-${idx}`">
                             <td>{{ product.name }}</td>
                             <td>{{ product.sku }}</td>
                             <td>{{ product.category?.name || 'N/A' }}</td>
+                            <td>{{ product.brand?.name || 'N/A' }}</td>
                             <td>{{ formatReportQty(product.stock_quantity, product.unit) }}</td>
                             <td>₹{{ product.cost_price }}</td>
                             <td>₹{{ (product.stock_quantity * product.cost_price).toFixed(2) }}</td>
@@ -147,7 +156,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="movement in (inventoryReport?.movements || []).filter(m => m != null && m.id != null)" :key="movement.id">
+                        <tr v-for="(movement, idx) in filteredInventoryMovements" :key="movement?.id ?? `movement-${idx}`">
                             <td>{{ formatDate(movement.created_at) }}</td>
                             <td>{{ movement.product?.name }}</td>
                             <td>
@@ -221,7 +230,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="sale in (salesReport?.sales || []).filter(s => s != null && s.id != null)" :key="sale.id">
+                        <tr v-for="(sale, idx) in filteredSalesRows" :key="sale?.id ?? `sale-${idx}`">
                             <td>{{ sale.invoice_number }}</td>
                             <td>{{ formatDate(sale.sale_date) }}</td>
                             <td>{{ sale.customer?.name || 'Walk-in' }}</td>
@@ -244,16 +253,68 @@
                         <tr>
                             <th>Product</th>
                             <th>SKU</th>
+                            <th>Brand</th>
                             <th>Quantity Sold</th>
                             <th>Revenue</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(product, index) in (salesReport?.top_products || []).filter(p => p != null && (p.product_id != null || p.id != null))" :key="product.product_id || product.id || index">
+                        <tr v-for="(product, index) in (salesReport?.top_products || []).filter(p => p != null && (p?.product_id != null || p?.id != null))" :key="product?.product_id ?? product?.id ?? `top-${index}`">
                             <td>{{ index + 1 }}. {{ product.product_name }}</td>
                             <td>{{ product.sku }}</td>
+                            <td>{{ product.brand_name || 'N/A' }}</td>
                             <td>{{ product.quantity }}</td>
                             <td>₹{{ product.revenue.toFixed(2) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Purchase Report -->
+        <div v-if="reportType === 'purchases' && purchaseReport" class="report-section">
+            <div class="report-stats">
+                <div class="stat-card">
+                    <h3>Total Purchases</h3>
+                    <p>{{ purchaseReport.stats?.total_purchases || 0 }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Amount</h3>
+                    <p>₹{{ (purchaseReport.stats?.total_amount || 0).toFixed(2) }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Items</h3>
+                    <p>{{ purchaseReport.stats?.total_items || 0 }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Tax</h3>
+                    <p>₹{{ (purchaseReport.stats?.total_tax || 0).toFixed(2) }}</p>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <h3>Purchase Bills</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Bill #</th>
+                            <th>Date</th>
+                            <th>Supplier</th>
+                            <th>Items</th>
+                            <th>Subtotal</th>
+                            <th>Tax</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(purchase, idx) in filteredPurchaseRows" :key="purchase?.id ?? `purchase-${idx}`">
+                            <td>{{ purchase.bill_number }}</td>
+                            <td>{{ formatDate(purchase.purchase_date) }}</td>
+                            <td>{{ purchase.supplier?.name || '—' }}</td>
+                            <td>{{ purchase.items?.length || 0 }}</td>
+                            <td>₹{{ purchase.subtotal }}</td>
+                            <td>₹{{ purchase.tax_amount }}</td>
+                            <td>₹{{ purchase.total }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -263,7 +324,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 
 export default {
@@ -274,6 +335,8 @@ export default {
         const productReport = ref(null);
         const inventoryReport = ref(null);
         const salesReport = ref(null);
+        const purchaseReport = ref(null);
+        const reportSearch = ref('');
         
         const filters = ref({
             date_from: '',
@@ -303,6 +366,12 @@ export default {
                     if (filters.value.date_to) params.date_to = filters.value.date_to;
                     const response = await axios.get('/api/reports/sales', { params });
                     salesReport.value = response.data;
+                } else if (reportType.value === 'purchases') {
+                    const params = {};
+                    if (filters.value.date_from) params.date_from = filters.value.date_from;
+                    if (filters.value.date_to) params.date_to = filters.value.date_to;
+                    const response = await axios.get('/api/reports/purchases', { params });
+                    purchaseReport.value = response.data;
                 }
             } catch (error) {
                 console.error('Error loading report:', error);
@@ -317,20 +386,25 @@ export default {
 
             if (reportType.value === 'products' && productReport.value) {
                 csv = 'Product,SKU,Category,Stock,Cost Price,Value,Status\n';
-                productReport.value.products.forEach(p => {
+                (productReport.value.products || []).filter(p => p != null).forEach(p => {
                     csv += `"${p.name}","${p.sku}","${p.category?.name || 'N/A'}","${p.stock_quantity}","${p.cost_price}","${(p.stock_quantity * p.cost_price).toFixed(2)}","${getProductStatus(p)}"\n`;
                 });
             } else if (reportType.value === 'inventory' && inventoryReport.value) {
                 csv = 'Date,Product,Type,Quantity,Unit Cost,User,Notes\n';
-                inventoryReport.value.movements.forEach(m => {
+                (inventoryReport.value.movements || []).filter(m => m != null).forEach(m => {
                     csv += `"${formatDate(m.created_at)}","${m.product?.name || 'N/A'}","${m.type.toUpperCase()}","${m.quantity}","${m.unit_cost || 'N/A'}","${m.user?.name || 'System'}","${(m.notes || '').replace(/"/g, '""')}"\n`;
                 });
             } else if (reportType.value === 'sales' && salesReport.value) {
                 csv = 'Invoice #,Date,Customer,Items,Subtotal,CGST,SGST,Discount,Total,Payment\n';
-                salesReport.value.sales.forEach(s => {
+                (salesReport.value.sales || []).filter(s => s != null).forEach(s => {
                     const cgst = (parseFloat(s.tax_amount) || 0) / 2;
                     const sgst = (parseFloat(s.tax_amount) || 0) / 2;
                     csv += `"${s.invoice_number}","${formatDate(s.sale_date)}","${s.customer?.name || 'Walk-in'}","${s.items?.length || 0}","${s.subtotal}","${cgst.toFixed(2)}","${sgst.toFixed(2)}","${s.discount}","${s.total}","${s.payment_method}"\n`;
+                });
+            } else if (reportType.value === 'purchases' && purchaseReport.value) {
+                csv = 'Bill #,Date,Supplier,Items,Subtotal,Tax,Total\n';
+                (purchaseReport.value.purchases || []).filter(p => p != null).forEach(p => {
+                    csv += `"${p.bill_number}","${formatDate(p.purchase_date)}","${p.supplier?.name || '—'}","${p.items?.length || 0}","${p.subtotal}","${p.tax_amount}","${p.total}"\n`;
                 });
             }
 
@@ -386,6 +460,72 @@ export default {
             return parseInt(n, 10) + ' ' + u;
         };
 
+        const normalizedIncludes = (source, term) => {
+            if (!term) return true;
+            if (source === null || source === undefined) return false;
+            return String(source).toLowerCase().includes(term);
+        };
+
+        const filteredProductRows = computed(() => {
+            const rows = (productReport.value?.products || []).filter(p => p != null && p.id != null);
+            const term = (reportSearch.value || '').trim().toLowerCase();
+            if (!term) return rows;
+            return rows.filter((p) => {
+                return (
+                    normalizedIncludes(p.name, term) ||
+                    normalizedIncludes(p.sku, term) ||
+                    normalizedIncludes(p.category?.name, term) ||
+                    normalizedIncludes(p.brand?.name, term) ||
+                    normalizedIncludes(p.stock_quantity, term) ||
+                    normalizedIncludes(p.cost_price, term)
+                );
+            });
+        });
+
+        const filteredInventoryMovements = computed(() => {
+            const rows = (inventoryReport.value?.movements || []).filter(m => m != null && m.id != null);
+            const term = (reportSearch.value || '').trim().toLowerCase();
+            if (!term) return rows;
+            return rows.filter((m) => {
+                return (
+                    normalizedIncludes(m.product?.name, term) ||
+                    normalizedIncludes(m.type, term) ||
+                    normalizedIncludes(m.user?.name, term) ||
+                    normalizedIncludes(m.quantity, term) ||
+                    normalizedIncludes(m.unit_cost, term)
+                );
+            });
+        });
+
+        const filteredSalesRows = computed(() => {
+            const rows = (salesReport.value?.sales || []).filter(s => s != null && s.id != null);
+            const term = (reportSearch.value || '').trim().toLowerCase();
+            if (!term) return rows;
+            return rows.filter((s) => {
+                return (
+                    normalizedIncludes(s.invoice_number, term) ||
+                    normalizedIncludes(s.customer?.name, term) ||
+                    normalizedIncludes(s.payment_method, term) ||
+                    normalizedIncludes(s.total, term) ||
+                    normalizedIncludes(s.subtotal, term)
+                );
+            });
+        });
+
+        const filteredPurchaseRows = computed(() => {
+            const rows = (purchaseReport.value?.purchases || []).filter(p => p != null && p.id != null);
+            const term = (reportSearch.value || '').trim().toLowerCase();
+            if (!term) return rows;
+            return rows.filter((p) => {
+                return (
+                    normalizedIncludes(p.bill_number, term) ||
+                    normalizedIncludes(p.supplier?.name, term) ||
+                    normalizedIncludes(p.total, term) ||
+                    normalizedIncludes(p.subtotal, term)
+                );
+            });
+        });
+
         onMounted(() => {
             loadReport();
         });
@@ -396,7 +536,9 @@ export default {
             productReport,
             inventoryReport,
             salesReport,
+            purchaseReport,
             filters,
+            reportSearch,
             loadReport,
             exportReport,
             reportCgst,
@@ -405,7 +547,11 @@ export default {
             getProductStatusClass,
             getMovementTypeClass,
             formatDate,
-            formatReportQty
+            formatReportQty,
+            filteredProductRows,
+            filteredInventoryMovements,
+            filteredSalesRows,
+            filteredPurchaseRows
         };
     }
 };
@@ -446,6 +592,14 @@ export default {
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 8px;
+}
+
+.search-input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    min-width: 220px;
+    flex: 1;
 }
 
 .stats-widgets {

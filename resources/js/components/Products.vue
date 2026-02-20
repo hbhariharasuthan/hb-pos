@@ -11,6 +11,10 @@
                 <option value="">All Categories</option>
                 <option v-for="cat in (categories || []).filter(c => c != null && c.id != null)" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
+            <select v-model="brandFilter" class="select-input">
+                <option value="">All Brands</option>
+                <option v-for="brand in (brands || []).filter(b => b != null && b.id != null)" :key="brand.id" :value="brand.id">{{ brand.name }}</option>
+            </select>
         </div>
 
         <div ref="tableContainer" class="table-container" @scroll="handleScroll">
@@ -20,6 +24,7 @@
                         <th>Name</th>
                         <th>SKU</th>
                         <th>Category</th>
+                        <th>Brand</th>
                         <th>Price</th>
                         <th>Stock</th>
                         <th>Status</th>
@@ -27,10 +32,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="product in filteredProducts" :key="product.id">
+                    <tr v-for="(product, idx) in filteredProducts" :key="product?.id ?? `product-${idx}`">
                         <td>{{ product.name }}</td>
                         <td>{{ product.sku }}</td>
                         <td>{{ product.category?.name || 'N/A' }}</td>
+                        <td>{{ product.brand?.name || 'N/A' }}</td>
                         <td>₹{{ product.selling_price }}</td>
                         <td :class="{ 'low-stock': product.stock_quantity <= product.min_stock_level }">
                             {{ formatQty(product.stock_quantity, product.unit) }}
@@ -83,6 +89,17 @@
                             value-key="id"
                             label-key="name"
                             placeholder="Select Category"
+                            emit-full-item
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label>Brand</label>
+                        <PaginatedDropdown
+                            v-model="form.brand_id"
+                            endpoint="/api/brands"
+                            value-key="id"
+                            label-key="name"
+                            placeholder="Select Brand"
                             emit-full-item
                         />
                     </div>
@@ -140,14 +157,17 @@ export default {
      },
     setup() {
         const categories = ref([]);
+        const brands = ref([]);
         const search = ref('');
         const categoryFilter = ref('');
+        const brandFilter = ref('');
         const showModal = ref(false);
         const editingProduct = ref(null);
         const form = ref({
             name: '',
             sku: '',
             category_id: '',
+            brand_id: '',
             cost_price: 0,
             selling_price: 0,
             stock_quantity: 0,
@@ -180,6 +200,9 @@ export default {
         watch(categoryFilter, (newValue) => {
             updateFilter('category_id', newValue || null);
         });
+        watch(brandFilter, (newValue) => {
+            updateFilter('brand_id', newValue || null);
+        });
 
         const filteredProducts = computed(() => {
             // Filter out null/undefined items to prevent errors
@@ -197,6 +220,19 @@ export default {
             } catch (error) {
                 console.error('Error loading categories:', error);
                 categories.value = [];
+            }
+        };
+
+        const loadBrands = async () => {
+            try {
+                const response = await axios.get('/api/brands/all');
+                const data = response.data.data || response.data;
+                brands.value = Array.isArray(data)
+                    ? data.filter(brand => brand != null && brand.id != null)
+                    : [];
+            } catch (error) {
+                console.error('Error loading brands:', error);
+                brands.value = [];
             }
         };
 
@@ -328,8 +364,10 @@ export default {
         return {
             products,
             categories,
+            brands,
             search,
             categoryFilter,
+            brandFilter,
             showModal,
             editingProduct,
             form,

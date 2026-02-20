@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ class ReportController extends Controller
 {
     public function productReport(Request $request)
     {
-        $query = Product::with('category');
+        $query = Product::with(['category', 'brand']);
 
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
@@ -112,7 +113,7 @@ class ReportController extends Controller
 
     public function salesReport(Request $request)
     {
-        $query = Sale::with(['customer', 'user', 'items.product']);
+        $query = Sale::with(['customer', 'user', 'items.product.brand']);
 
         if ($request->has('date_from')) {
             $query->whereDate('sale_date', '>=', $request->date_from);
@@ -172,6 +173,7 @@ class ReportController extends Controller
                         'product_id' => $productId,
                         'product_name' => $item->product->name,
                         'sku' => $item->product->sku,
+                        'brand_name' => optional($item->product->brand)->name,
                         'quantity' => 0,
                         'revenue' => 0,
                     ];
@@ -187,6 +189,36 @@ class ReportController extends Controller
             'sales' => $sales,
             'daily_sales' => $dailySales,
             'top_products' => $topProducts,
+        ]);
+    }
+
+    public function purchaseReport(Request $request)
+    {
+        $query = Purchase::with(['supplier', 'items.product']);
+
+        if ($request->has('date_from')) {
+            $query->whereDate('purchase_date', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->whereDate('purchase_date', '<=', $request->date_to);
+        }
+
+        $purchases = $query->orderBy('purchase_date', 'desc')->get();
+
+        $stats = [
+            'total_purchases' => $purchases->count(),
+            'total_amount' => (float) $purchases->sum('total'),
+            'total_items' => $purchases->sum(function ($p) {
+                return $p->items->sum('quantity');
+            }),
+            'total_tax' => (float) $purchases->sum('tax_amount'),
+            'total_subtotal' => (float) $purchases->sum('subtotal'),
+        ];
+
+        return response()->json([
+            'stats' => $stats,
+            'purchases' => $purchases,
         ]);
     }
 

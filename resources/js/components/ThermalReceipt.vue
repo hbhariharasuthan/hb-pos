@@ -23,6 +23,10 @@
                 <span class="label">Customer:</span>
                 <span class="value">{{ sale.customer.name }}</span>
             </div>
+            <div class="receipt-row" v-if="sale.customer?.gst_number">
+                <span class="label">GST:</span>
+                <span class="value">{{ sale.customer.gst_number }}</span>
+            </div>
         </div>
 
         <div class="receipt-divider">--------------------------------</div>

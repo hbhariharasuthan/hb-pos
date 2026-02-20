@@ -25,6 +25,7 @@
                     <p><strong>{{ purchase?.supplier?.name || '—' }}</strong></p>
                     <p v-if="purchase?.supplier?.phone">{{ purchase.supplier.phone }}</p>
                     <p v-if="purchase?.supplier?.email">{{ purchase.supplier.email }}</p>
+                    <p v-if="purchase?.supplier?.gst_number">GST: {{ purchase.supplier.gst_number }}</p>
                     <p v-if="purchase?.supplier?.address">{{ purchase.supplier.address }}</p>
                     <p v-if="purchase?.supplier?.city">{{ purchase.supplier.city }}{{ purchase?.supplier?.state ? ', ' + purchase.supplier.state : '' }}</p>
                 </div>

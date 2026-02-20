@@ -1,12 +1,12 @@
 <template>
     <div class="categories-container">
         <div class="page-header">
-            <h1>Categories Management</h1>
-            <button @click="showModal = true" class="btn btn-primary">Add Category</button>
+            <h1>Brands Management</h1>
+            <button @click="showModal = true" class="btn btn-primary">Add Brand</button>
         </div>
 
         <div class="filters">
-            <input v-model="search" type="text" placeholder="Search categories..." class="search-input" />
+            <input v-model="search" type="text" placeholder="Search brands..." class="search-input" />
             <select v-model="statusFilter" class="select-input">
                 <option value="">All Status</option>
                 <option value="active">Active</option>
@@ -27,46 +27,46 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="(category, idx) in filteredCategories" :key="category?.id ?? `category-${idx}`">
-                        <td>{{ category.name }}</td>
-                        <td>{{ category.code || 'N/A' }}</td>
-                        <td>{{ category.description || 'N/A' }}</td>
-                        <td>{{ category.products_count || 0 }}</td>
+                    <tr v-for="(brand, idx) in filteredBrands" :key="brand?.id ?? `brand-${idx}`">
+                        <td>{{ brand.name }}</td>
+                        <td>{{ brand.code || 'N/A' }}</td>
+                        <td>{{ brand.description || 'N/A' }}</td>
+                        <td>{{ brand.products_count || 0 }}</td>
                         <td>
-                            <span :class="category.is_active ? 'badge-success' : 'badge-danger'">
-                                {{ category.is_active ? 'Active' : 'Inactive' }}
+                            <span :class="brand.is_active ? 'badge-success' : 'badge-danger'">
+                                {{ brand.is_active ? 'Active' : 'Inactive' }}
                             </span>
                         </td>
                         <td>
-                            <button @click="editCategory(category)" class="btn-sm btn-primary">Edit</button>
-                            <button @click="deleteCategory(category.id)" class="btn-sm btn-danger">Delete</button>
+                            <button @click="editBrand(brand)" class="btn-sm btn-primary">Edit</button>
+                            <button @click="deleteBrand(brand.id)" class="btn-sm btn-danger">Delete</button>
                         </td>
                     </tr>
                 </tbody>
             </table>
             <div ref="loadMoreTrigger" v-if="hasMore" class="load-more-trigger">
-                <div v-if="loading" class="loading-indicator">Loading more categories...</div>
+                <div v-if="loading" class="loading-indicator">Loading more brands...</div>
                 <div v-else class="load-more-hint">Scroll for more</div>
             </div>
-            <div v-if="!hasMore && filteredCategories.length > 0" class="no-more-indicator">No more categories to load</div>
+            <div v-if="!hasMore && filteredBrands.length > 0" class="no-more-indicator">No more brands to load</div>
         </div>
 
-        <!-- Category Modal -->
+        <!-- Brand Modal -->
         <div v-if="showModal" class="modal-overlay" @click="showModal = false">
             <div class="modal-content" @click.stop>
-                <h2>{{ editingCategory ? 'Edit Category' : 'Add Category' }}</h2>
-                <form @submit.prevent="saveCategory">
+                <h2>{{ editingBrand ? 'Edit Brand' : 'Add Brand' }}</h2>
+                <form @submit.prevent="saveBrand">
                     <div class="form-group">
                         <label>Name *</label>
                         <input v-model="form.name" type="text" required />
                     </div>
                     <div class="form-group">
                         <label>Code</label>
-                        <input v-model="form.code" type="text" placeholder="Optional category code" />
+                        <input v-model="form.code" type="text" placeholder="Optional brand code" />
                     </div>
                     <div class="form-group">
                         <label>Description</label>
-                        <textarea v-model="form.description" rows="3" placeholder="Category description"></textarea>
+                        <textarea v-model="form.description" rows="3" placeholder="Brand description"></textarea>
                     </div>
                     <div class="form-group">
                         <label>
@@ -90,12 +90,12 @@ import axios from 'axios';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 
 export default {
-    name: 'Categories',
+    name: 'Brands',
     setup() {
         const search = ref('');
         const statusFilter = ref('');
         const showModal = ref(false);
-        const editingCategory = ref(null);
+        const editingBrand = ref(null);
         const form = ref({
             name: '',
             code: '',
@@ -104,58 +104,56 @@ export default {
         });
 
         const {
-            items: categories,
+            items: brands,
             loading,
             hasMore,
             loadInitial,
             loadMore,
-            search: searchCategories,
+            search: searchBrands,
             updateFilter
-        } = usePaginatedDropdown('/api/categories', {
+        } = usePaginatedDropdown('/api/brands', {
             searchParam: 'search',
             initialFilters: {},
             perPage: 10
         });
 
-        watch(search, (v) => searchCategories(v));
+        watch(search, (v) => searchBrands(v));
         watch(statusFilter, (v) => {
             if (v === 'active') updateFilter('is_active', 1);
             else if (v === 'inactive') updateFilter('is_active', 0);
             else updateFilter('is_active', null);
         });
 
-        const filteredCategories = computed(() => (categories.value || []).filter(c => c != null && c.id != null));
+        const filteredBrands = computed(() => (brands.value || []).filter(b => b != null && b.id != null));
 
-        const loadCategories = () => loadInitial();
-
-        const editCategory = (category) => {
-            editingCategory.value = category;
-            form.value = { ...category };
+        const editBrand = (brand) => {
+            editingBrand.value = brand;
+            form.value = { ...brand };
             showModal.value = true;
         };
 
-        const saveCategory = async () => {
+        const saveBrand = async () => {
             try {
-                if (editingCategory.value) {
-                    await axios.put(`/api/categories/${editingCategory.value.id}`, form.value);
+                if (editingBrand.value) {
+                    await axios.put(`/api/brands/${editingBrand.value.id}`, form.value);
                 } else {
-                    await axios.post('/api/categories', form.value);
+                    await axios.post('/api/brands', form.value);
                 }
                 loadInitial();
                 showModal.value = false;
                 resetForm();
             } catch (error) {
-                alert(error.response?.data?.message || 'Error saving category');
+                alert(error.response?.data?.message || 'Error saving brand');
             }
         };
 
-        const deleteCategory = async (id) => {
-            if (!confirm('Are you sure you want to delete this category?')) return;
+        const deleteBrand = async (id) => {
+            if (!confirm('Are you sure you want to delete this brand?')) return;
             try {
-                await axios.delete(`/api/categories/${id}`);
+                await axios.delete(`/api/brands/${id}`);
                 loadInitial();
             } catch (error) {
-                alert(error.response?.data?.message || 'Error deleting category');
+                alert(error.response?.data?.message || 'Error deleting brand');
             }
         };
 
@@ -166,7 +164,7 @@ export default {
                 description: '',
                 is_active: true
             };
-            editingCategory.value = null;
+            editingBrand.value = null;
         };
 
         const scrollObserver = ref(null);
@@ -199,7 +197,7 @@ export default {
         });
 
         return {
-            categories,
+            brands,
             search,
             loading,
             hasMore,
@@ -208,12 +206,12 @@ export default {
             loadMoreTrigger,
             statusFilter,
             showModal,
-            editingCategory,
+            editingBrand,
             form,
-            filteredCategories,
-            editCategory,
-            saveCategory,
-            deleteCategory
+            filteredBrands,
+            editBrand,
+            saveBrand,
+            deleteBrand
         };
     }
 };
@@ -402,3 +400,5 @@ export default {
     color: white;
 }
 </style>
+
+

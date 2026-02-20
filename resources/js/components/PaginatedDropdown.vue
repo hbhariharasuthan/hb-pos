@@ -25,8 +25,8 @@
             </div>
             <template v-else>
             <div
-                v-for="item in validItems"
-                :key="getValue(item)"
+                v-for="(item, idx) in validItems"
+                :key="getValue(item) ?? `item-${idx}`"
                 class="dropdown-item"
                 :class="{ selected: getValue(item) === modelValue }"
                 @click="selectItem(item)"

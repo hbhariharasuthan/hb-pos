@@ -14,7 +14,7 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $query = Product::with('category');
+        $query = Product::with(['category', 'brand']);
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -22,11 +22,18 @@ class ProductController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('sku', 'like', "%{$search}%")
                   ->orWhere('barcode', 'like', "%{$search}%");
+            })->orWhereHas('brand', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
             });
-       }
+        }
 
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->has('brand_id')) {
+            $query->where('brand_id', $request->brand_id);
         }
 
         if ($request->has('low_stock')) {
@@ -56,6 +63,7 @@ class ProductController extends Controller
                 'sku' => 'required|string|unique:products,sku',
                 'barcode' => 'nullable|string|unique:products,barcode',
                 'category_id' => 'nullable|exists:categories,id',
+                'brand_id' => 'nullable|exists:brands,id',
                 'description' => 'nullable|string',
                 'cost_price' => 'required|numeric|min:0',
                 'selling_price' => 'required|numeric|min:0',
@@ -67,7 +75,7 @@ class ProductController extends Controller
 
             $product = Product::create($validated);
 
-            return response()->json($product->load('category'), 201);
+            return response()->json($product->load(['category', 'brand']), 201);
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'Validation failed',
@@ -78,7 +86,7 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        $product = Product::with('category')->findOrFail($id);
+        $product = Product::with(['category', 'brand'])->findOrFail($id);
         return response()->json($product);
     }
 
@@ -92,6 +100,7 @@ class ProductController extends Controller
                 'sku' => 'sometimes|required|string|unique:products,sku,' . $id,
                 'barcode' => 'nullable|string|unique:products,barcode,' . $id,
                 'category_id' => 'nullable|exists:categories,id',
+                'brand_id' => 'nullable|exists:brands,id',
                 'description' => 'nullable|string',
                 'cost_price' => 'sometimes|required|numeric|min:0',
                 'selling_price' => 'sometimes|required|numeric|min:0',
@@ -103,7 +112,7 @@ class ProductController extends Controller
 
             $product->update($validated);
 
-            return response()->json($product->load('category'));
+            return response()->json($product->load(['category', 'brand']));
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'Validation failed',

@@ -23,8 +23,8 @@
                 <div ref="gridContainer" class="products-grid-wrapper" @scroll="handleScroll">
                     <div class="products-grid">
                         <div
-                            v-for="product in filteredProducts"
-                            :key="product.id"
+                            v-for="(product, idx) in filteredProducts"
+                            :key="product?.id ?? `product-${idx}`"
                             class="product-card"
                             :class="{ 'low-stock': product.stock_quantity <= product.min_stock_level }"
                             @click="addToCart(product)"
@@ -481,6 +481,7 @@ export default {
                         <span>${date}</span>
                     </div>
                     ${saleData.customer ? `<div class="row"><span>Customer:</span><span>${saleData.customer.name}</span></div>` : ''}
+                    ${saleData.customer?.gst_number ? `<div class="row"><span>GST:</span><span>${saleData.customer.gst_number}</span></div>` : ''}
                     <div class="divider"></div>
                     ${itemsHTML}
                     <div class="divider"></div>
@@ -728,6 +729,8 @@ export default {
     padding: 20px;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
 }
 
 .product-search {
@@ -859,8 +862,9 @@ export default {
 
 .cart-section {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .cart-section h2 {
@@ -937,9 +941,10 @@ export default {
 }
 
 .cart-summary {
+    flex-shrink: 0;
     border-top: 2px solid #e0e0e0;
     padding-top: 15px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .summary-row {
@@ -999,6 +1004,7 @@ export default {
 }
 
 .btn-large {
+    flex-shrink: 0;
     width: 100%;
     padding: 15px;
     font-size: 18px;

@@ -12,6 +12,19 @@ class SaleController extends Controller
     {
         $query = Sale::with(['customer', 'user', 'items.product']);
 
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('invoice_number', 'like', "%{$search}%")
+                  ->orWhere('payment_method', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                      $customerQuery->where('name', 'like', "%{$search}%")
+                                    ->orWhere('email', 'like', "%{$search}%")
+                                    ->orWhere('phone', 'like', "%{$search}%");
+                  });
+            });
+        }
+
         if ($request->has('date_from')) {
             $query->whereDate('sale_date', '>=', $request->date_from);
         }

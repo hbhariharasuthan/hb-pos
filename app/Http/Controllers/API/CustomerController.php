@@ -51,10 +51,16 @@ class CustomerController extends Controller
                 'postal_code' => 'nullable|string|max:20',
                 'country' => 'nullable|string|max:100',
                 'credit_limit' => 'numeric|min:0',
+                'opening_balance' => 'nullable|numeric|min:0',
                 'is_active' => 'boolean',
             ]);
 
-            $customer = Customer::create($validated);
+            $openingBalance = $validated['opening_balance'] ?? 0;
+            unset($validated['opening_balance']);
+
+            $customer = Customer::create(array_merge($validated, [
+                'balance' => $openingBalance,
+            ]));
             return response()->json($customer, 201);
         } catch (ValidationException $e) {
             return response()->json([

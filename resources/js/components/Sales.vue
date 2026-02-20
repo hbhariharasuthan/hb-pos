@@ -3,6 +3,12 @@
         <div class="page-header">
             <h1>Sales History</h1>
             <div class="header-actions">
+                <input
+                    v-model="search"
+                    type="text"
+                    placeholder="Search by invoice #, customer, payment..."
+                    class="search-input"
+                />
                 <input v-model="dateFrom" type="date" class="date-input" />
                 <input v-model="dateTo" type="date" class="date-input" />
                 <button @click="loadSales" class="btn btn-secondary">Filter</button>
@@ -24,7 +30,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="sale in filteredSales" :key="sale.id">
+                    <tr v-for="(sale, idx) in filteredSales" :key="sale?.id ?? `sale-${idx}`">
                         <td>{{ sale.invoice_number }}</td>
                         <td>{{ formatDate(sale.sale_date) }}</td>
                         <td>{{ sale.customer?.name || 'Walk-in' }}</td>
@@ -57,7 +63,7 @@
     </div>
 </template>
 
-<script>
+    <script>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
@@ -68,6 +74,7 @@ export default {
         const router = useRouter();
         const dateFrom = ref('');
         const dateTo = ref('');
+        const search = ref('');
 
         const {
             items: sales,
@@ -75,7 +82,8 @@ export default {
             hasMore,
             loadInitial,
             loadMore,
-            applyFilters
+            applyFilters,
+            search: searchSales
         } = usePaginatedDropdown('/api/sales', {
             searchParam: 'search',
             initialFilters: {},
@@ -90,6 +98,10 @@ export default {
         });
 
         const filteredSales = computed(() => (sales.value || []).filter(s => s != null && s.id != null));
+
+        watch(search, (value) => {
+            searchSales(value || '');
+        });
 
         const loadSales = () => loadInitial();
 
@@ -141,6 +153,7 @@ export default {
         });
 
         return {
+            search,
             dateFrom,
             dateTo,
             filteredSales,
@@ -175,6 +188,12 @@ export default {
     gap: 10px;
 }
 
+.search-input {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    min-width: 220px;
+}
 .date-input {
     padding: 8px;
     border: 1px solid #ddd;
