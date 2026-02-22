@@ -39,6 +39,14 @@ class POSController extends Controller
             });
         }
 
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->has('brand_id')) {
+            $query->where('brand_id', $request->brand_id);
+        }
+
         $query->orderBy('name');
 
         // Explicit paginated mode for dropdowns / infinite scroll

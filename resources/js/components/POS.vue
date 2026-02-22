@@ -10,15 +10,37 @@
 
         <div class="pos-content">
             <div class="pos-left">
-                <div class="product-search">
-                    <input
+                     <div class="product-search">
+                        <input
                         v-model="searchQuery"
                         type="text"
                         placeholder="Search products by name, SKU, or barcode..."
                         class="search-input"
                         @input="onSearchInput"
-                    />
-                </div>
+                        />
+                        <div class="filter-dropdown">
+                            <PaginatedDropdown
+                                v-model="categoryFilter"
+                                endpoint="/api/categories"
+                                value-key="id"
+                                label-key="name"
+                                placeholder="All Categories"
+                                include-all-option
+                                all-option-label="All Categories"
+                            />
+                        </div>
+                        <div class="filter-dropdown">
+                            <PaginatedDropdown
+                                v-model="brandFilter"
+                                endpoint="/api/brands"
+                                value-key="id"
+                                label-key="name"
+                                placeholder="All Brands"
+                                include-all-option
+                                all-option-label="All Brands"
+                            />
+                        </div>
+                    </div>
 
                 <div ref="gridContainer" class="products-grid-wrapper" @scroll="handleScroll">
                     <div class="products-grid">
@@ -200,6 +222,8 @@ export default {
         const processing = ref(false);
         const lastSale = ref(null);
         const showReceipt = ref(false);
+        const categoryFilter = ref('');
+        const brandFilter = ref('');
         const newCustomer = ref({
             name: '',
             phone: '',
@@ -212,7 +236,8 @@ export default {
             hasMore,
             loadInitial,
             loadMore,
-            search: searchProducts
+            search: searchProducts,
+            updateFilter
         } = usePaginatedDropdown('/api/pos/products', {
             searchParam: 'search',
             initialFilters: {},
@@ -220,6 +245,14 @@ export default {
         });
 
         watch(searchQuery, (v) => searchProducts(v));
+
+        // Watch for category filter changes
+        watch(categoryFilter, (newValue) => {
+            updateFilter('category_id', newValue || null);
+        });
+        watch(brandFilter, (newValue) => {
+            updateFilter('brand_id', newValue || null);
+        });
 
         const filteredProducts = computed(() => (products.value || []).filter(p => p != null && p.id != null));
 
@@ -674,7 +707,9 @@ export default {
             handleCustomerSelect,
             addNewCustomer,
             processSale,
-            printThermalReceipt
+            printThermalReceipt,
+            categoryFilter,
+            brandFilter
         };
     }
 };
@@ -734,17 +769,23 @@ export default {
 }
 
 .product-search {
-    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
 }
 
 .search-input {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 16px;
+    flex: 1;
+    min-width: 300px;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
 }
-
+.filter-dropdown {
+    width: 220px;
+}
 .products-grid-wrapper {
     flex: 1;
     overflow-y: auto;
