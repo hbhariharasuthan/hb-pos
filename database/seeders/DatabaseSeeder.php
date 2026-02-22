@@ -82,20 +82,6 @@ class DatabaseSeeder extends Seeder
             $cashier->roles()->attach($cashierRole->id);
         }
 
-        // Create Categories (use firstOrCreate to avoid duplicates)
-        $categories = [
-            ['name' => 'Electronics', 'code' => 'ELEC'],
-            ['name' => 'Clothing', 'code' => 'CLTH'],
-            ['name' => 'Food & Beverages', 'code' => 'FOOD'],
-            ['name' => 'Books', 'code' => 'BOOK'],
-        ];
-
-        foreach ($categories as $cat) {
-            Category::firstOrCreate(
-                ['name' => $cat['name']],
-                $cat
-            );
-        }
 
         // Seed products using ProductSeeder (500 electrical products)
         $this->call(ProductSeeder::class);

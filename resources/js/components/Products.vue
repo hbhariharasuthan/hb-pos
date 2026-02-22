@@ -7,14 +7,28 @@
 
         <div class="filters">
             <input v-model="search" type="text" placeholder="Search products..." class="search-input" />
-            <select v-model="categoryFilter" class="select-input">
-                <option value="">All Categories</option>
-                <option v-for="cat in (categories || []).filter(c => c != null && c.id != null)" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-            </select>
-            <select v-model="brandFilter" class="select-input">
-                <option value="">All Brands</option>
-                <option v-for="brand in (brands || []).filter(b => b != null && b.id != null)" :key="brand.id" :value="brand.id">{{ brand.name }}</option>
-            </select>
+            <div class="filter-dropdown">
+                <PaginatedDropdown
+                    v-model="categoryFilter"
+                    endpoint="/api/categories"
+                    value-key="id"
+                    label-key="name"
+                    placeholder="All Categories"
+                    include-all-option
+                    all-option-label="All Categories"
+                />
+            </div>
+            <div class="filter-dropdown">
+                <PaginatedDropdown
+                    v-model="brandFilter"
+                    endpoint="/api/brands"
+                    value-key="id"
+                    label-key="name"
+                    placeholder="All Brands"
+                    include-all-option
+                    all-option-label="All Brands"
+                />
+            </div>
         </div>
 
         <div ref="tableContainer" class="table-container" @scroll="handleScroll">
@@ -147,6 +161,7 @@
 <script>
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { toId } from '../utils/toId.js';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 import PaginatedDropdown from '../components/PaginatedDropdown.vue';
 
@@ -156,8 +171,6 @@ export default {
      PaginatedDropdown
      },
     setup() {
-        const categories = ref([]);
-        const brands = ref([]);
         const search = ref('');
         const categoryFilter = ref('');
         const brandFilter = ref('');
@@ -209,33 +222,6 @@ export default {
             return (products.value || []).filter(product => product != null && product.id != null);
         });
 
-        const loadCategories = async () => {
-            try {
-                const response = await axios.get('/api/categories');
-                const data = response.data.data || response.data;
-                // Filter out null/undefined items to prevent errors
-                categories.value = Array.isArray(data) 
-                    ? data.filter(cat => cat != null && cat.id != null)
-                    : [];
-            } catch (error) {
-                console.error('Error loading categories:', error);
-                categories.value = [];
-            }
-        };
-
-        const loadBrands = async () => {
-            try {
-                const response = await axios.get('/api/brands/all');
-                const data = response.data.data || response.data;
-                brands.value = Array.isArray(data)
-                    ? data.filter(brand => brand != null && brand.id != null)
-                    : [];
-            } catch (error) {
-                console.error('Error loading brands:', error);
-                brands.value = [];
-            }
-        };
-
         // Intersection Observer for infinite scroll
         const scrollObserver = ref(null);
         const loadMoreTrigger = ref(null);
@@ -286,7 +272,8 @@ export default {
 
             form.value = {
                 ...product,
-                category_id: product.category || null // <-- set category object for dropdown
+                category_id: product.category || null,
+                brand_id: product.brand || null,
             };
 
             showModal.value = true;
@@ -294,10 +281,15 @@ export default {
 
         const saveProduct = async () => {
             try {
+                const payload = {
+                    ...form.value,
+                    category_id: toId(form.value.category_id),
+                    brand_id: toId(form.value.brand_id),
+                };
                 if (editingProduct.value) {
-                    await axios.put(`/api/products/${editingProduct.value.id}`, form.value);
+                    await axios.put(`/api/products/${editingProduct.value.id}`, payload);
                 } else {
-                    await axios.post('/api/products', form.value);
+                    await axios.post('/api/products', payload);
                 }
                 loadInitial(); // Reload from page 1
                 showModal.value = false;
@@ -335,6 +327,7 @@ export default {
                 name: '',
                 sku: '',
                 category_id: '',
+                brand_id: '',
                 cost_price: 0,
                 selling_price: 0,
                 stock_quantity: 0,
@@ -347,7 +340,6 @@ export default {
 
         onMounted(() => {
             loadInitial();
-            loadCategories();
             // Setup scroll observer after DOM is ready
             setTimeout(() => {
                 setupScrollObserver();
@@ -363,8 +355,6 @@ export default {
 
         return {
             products,
-            categories,
-            brands,
             search,
             categoryFilter,
             brandFilter,
@@ -404,13 +394,20 @@ export default {
     display: flex;
     gap: 15px;
     margin-bottom: 20px;
+    overflow: visible;
 }
 
-.search-input, .select-input {
+.search-input {
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 8px;
     flex: 1;
+}
+
+.filters .filter-dropdown {
+    flex: 1;
+    min-width: 150px;
+    overflow: visible;
 }
 
 .table-container {

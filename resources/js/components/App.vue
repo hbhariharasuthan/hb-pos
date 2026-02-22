@@ -2,8 +2,8 @@
     <div id="app">
         <nav v-if="isAuthenticated" class="main-nav">
             <div class="nav-brand">
-                <img src="/logo.png" alt="HB Logo" class="logo-img" />
-                <span class="brand-text">HB POS System</span>
+                <img src="/client-logo.png" alt="HB Logo" class="logo-img" />
+                <span class="brand-text">Vinayaga Electricals Kulithalai</span>
             </div>
             <div class="nav-links">
                 <router-link to="/dashboard">Dashboard</router-link>
@@ -20,6 +20,7 @@
         </nav>
         <router-view />
         <footer class="app-footer">
+            <img src="/logo.png" alt="HB Logo" class="footer-logo" />
             <p>&copy; {{ currentYear }} hbitpartner.com. All rights reserved.</p>
         </footer>
     </div>
@@ -129,16 +130,27 @@ body {
 }
 
 .app-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    padding: 10px 0;
     background: white;
-    padding: 20px;
-    text-align: center;
-    border-top: 1px solid #e0e0e0;
-    margin-top: auto;
     color: #666;
     font-size: 14px;
+
+    border-top: 1px solid #e5e5e5;
+    z-index: 1000;
 }
 
-.app-footer p {
-    margin: 0;
+.app-footer .footer-logo {
+    height: 28px;
+    width: auto;
 }
 </style>

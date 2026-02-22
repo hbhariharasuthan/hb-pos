@@ -467,7 +467,7 @@ export default {
                 </head>
                 <body>
                     <div class="header">
-                        <div class="company-name">HB POS System</div>
+                        <div class="company-name">Vinayaga Electricals Kulithalai</div>
                         <div class="company-address">hbitpartner.com</div>
                         <div class="company-contact">Your IT Partner</div>
                     </div>

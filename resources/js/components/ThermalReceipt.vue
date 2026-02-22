@@ -2,7 +2,7 @@
     <div id="thermal-receipt" class="thermal-receipt" v-if="sale">
         <!-- Company Header -->
         <div class="receipt-header">
-            <div class="company-name">HB POS System</div>
+            <div class="company-name">Vinayaga Electricals Kulithalai</div>
             <div class="company-address">hbitpartner.com</div>
             <div class="company-contact">Your IT Partner</div>
         </div>

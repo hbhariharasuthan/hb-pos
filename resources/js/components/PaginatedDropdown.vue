@@ -1,5 +1,5 @@
 <template>
-    <div class="paginated-dropdown">
+    <div ref="rootRef" class="paginated-dropdown">
         <div class="dropdown-header">
             <input
                 v-model="localSearch"
@@ -17,6 +17,14 @@
             class="dropdown-list"
             @scroll="handleScroll"
         >
+            <div
+                v-if="includeAllOption"
+                class="dropdown-item all-option"
+                :class="{ selected: !modelValue }"
+                @click="clearSelection"
+            >
+                {{ allOptionLabel }}
+            </div>
             <div v-if="loading && (validItems.length === 0 || items.length === 0)" class="loading-state">
                 Loading...
             </div>
@@ -87,6 +95,14 @@ export default {
         placeholder: {
             type: String,
             default: 'Search...'
+        },
+        includeAllOption: {
+            type: Boolean,
+            default: false
+        },
+        allOptionLabel: {
+            type: String,
+            default: 'All'
         }
     },
     emits: ['update:modelValue', 'select'],
@@ -95,8 +111,11 @@ export default {
         valueKey,
         labelKey,
         secondaryLabelKey,
-        placeholder
+        placeholder,
+        includeAllOption,
+        allOptionLabel
         } = props;
+        const rootRef = ref(null);
         const dropdownList = ref(null);
         const localSearch = ref('');
         const isOpen = ref(false);
@@ -224,8 +243,16 @@ export default {
             isOpen.value = false;
         };
 
+        // Clear selection (for "All" option)
+        const clearSelection = () => {
+            emit('update:modelValue', null);
+            localSearch.value = '';
+            isOpen.value = false;
+        };
+
         const onClickOutside = (e) => {
-            if (!dropdownList.value?.contains(e.target)) {
+            // Check root element so clicks on header/input don't close immediately
+            if (!rootRef.value?.contains(e.target)) {
                 isOpen.value = false;
             }
         };
@@ -249,6 +276,10 @@ export default {
             labelKey,
             secondaryLabelKey,
             placeholder,
+            includeAllOption,
+            allOptionLabel,
+            clearSelection,
+            rootRef,
             dropdownList,
             localSearch,
             isOpen,
@@ -271,11 +302,12 @@ export default {
 
 <style scoped>
 .paginated-dropdown {
+    position: relative;
     border: 1px solid #ddd;
     border-radius: 8px;
     background: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    overflow: visible;
 }
 
 .dropdown-header {
@@ -298,9 +330,19 @@ export default {
 }
 
 .dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 2px;
     max-height: 300px;
     overflow-y: auto;
     padding: 5px 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
 }
 
 .dropdown-item {
@@ -317,6 +359,11 @@ export default {
 .dropdown-item.selected {
     background-color: #e7f0ff;
     font-weight: 500;
+}
+
+.dropdown-item.all-option {
+    border-bottom: 1px solid #ddd;
+    font-style: italic;
 }
 
 .item-label {
