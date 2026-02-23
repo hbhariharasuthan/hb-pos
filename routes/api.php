@@ -32,7 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/brands/all', [BrandController::class, 'index'])->name('brands.all');
     Route::apiResource('brands', BrandController::class);
     //import brands
-    Route::post('/import/brands', [ImportController::class, 'importBrands']);
+    Route::post('/import/{type}', [ImportController::class, 'import']);
 
 
     // Products
