@@ -11,6 +11,7 @@ use App\Http\Controllers\API\StockController;
 use App\Http\Controllers\API\ReturnController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\PurchaseController;
+use App\Http\Controllers\API\ImportController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -30,6 +31,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Brands
     Route::get('/brands/all', [BrandController::class, 'index'])->name('brands.all');
     Route::apiResource('brands', BrandController::class);
+    //import brands
+    Route::post('/import/brands', [ImportController::class, 'importBrands']);
+
 
     // Products
     Route::apiResource('products', ProductController::class);
@@ -66,4 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/inventory', [ReportController::class, 'inventoryReport']);
     Route::get('/reports/sales', [ReportController::class, 'salesReport']);
     Route::get('/reports/purchases', [ReportController::class, 'purchaseReport']);
+
+    // Import
+    Route::get('/import/sample/{type}', [ImportController::class, 'downloadSample']);
 });

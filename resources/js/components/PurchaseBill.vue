@@ -8,9 +8,10 @@
         <div id="purchase-bill-content" class="bill-content">
             <div class="bill-header">
                 <div class="company-info">
-                    <h1>POS & Inventory System</h1>
-                    <p>123 Business Street</p>
-                    <p>City, State 12345</p>
+                    <h1>Vinayaga Electricals</h1>
+                    <p>Kulithalai</p>
+                    <p>6390104</p>
+                    <p>Phone: 8883114268</p>
                 </div>
                 <div class="bill-info">
                     <h2>PURCHASE BILL</h2>
@@ -85,6 +86,7 @@
 
             <div class="bill-footer">
                 <p>Thank you!</p>
+                 <p>Visit us at hbitpartner.com</p>
             </div>
         </div>
     </div>

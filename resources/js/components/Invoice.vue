@@ -9,10 +9,10 @@
         <div id="invoice-content" class="invoice-content">
             <div class="invoice-header">
                 <div class="company-info">
-                    <h1>POS & Inventory System</h1>
-                    <p>123 Business Street</p>
-                    <p>City, State 12345</p>
-                    <p>Phone: (123) 456-7890</p>
+                    <h1>Vinayaga Electricals</h1>
+                    <p>Kulithalai</p>
+                    <p>6390104</p>
+                    <p>Phone: 8883114268</p>
                 </div>
                 <div class="invoice-info">
                     <h2>INVOICE</h2>
@@ -199,8 +199,7 @@ export default {
                 <body>
                     <div class="header">
                         <div class="company-name">Vinayaga Electricals Kulithalai</div>
-                        <div style="font-size: 11px;">hbitpartner.com</div>
-                        <div style="font-size: 10px; color: #666;">Your IT Partner</div>
+                        <div style="font-size: 11px;">8883114268</div>
                     </div>
                     <div class="divider"></div>
                     <div class="row">
@@ -238,6 +237,7 @@ export default {
                     <div class="footer">
                         <div>Thank you for your business!</div>
                         <div>Visit us at hbitpartner.com</div>
+                        <div>Your IT Partner</div>
                     </div>
                 </body>
                 </html>

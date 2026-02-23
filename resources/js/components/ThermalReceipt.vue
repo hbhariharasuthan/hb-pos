@@ -3,8 +3,7 @@
         <!-- Company Header -->
         <div class="receipt-header">
             <div class="company-name">Vinayaga Electricals Kulithalai</div>
-            <div class="company-address">hbitpartner.com</div>
-            <div class="company-contact">Your IT Partner</div>
+            <div style="font-size: 11px;">8883114268</div>
         </div>
 
         <div class="receipt-divider">--------------------------------</div>
@@ -96,8 +95,9 @@
 
         <!-- Footer -->
         <div class="receipt-footer">
-            <div class="footer-text">Thank you for your business!</div>
-            <div class="footer-text">Visit us at hbitpartner.com</div>
+                        <div class="footer-text">Thank you for your business!</div>
+                        <div class="footer-text">Visit us at hbitpartner.com</div>
+                        <div class="footer-text">Your IT Partner</div>
         </div>
 
         <div class="receipt-divider">================================</div>

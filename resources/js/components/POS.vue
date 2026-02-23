@@ -500,9 +500,9 @@ export default {
                 </head>
                 <body>
                     <div class="header">
-                        <div class="company-name">Vinayaga Electricals Kulithalai</div>
-                        <div class="company-address">hbitpartner.com</div>
-                        <div class="company-contact">Your IT Partner</div>
+                        <div class="company-name">Vinayaga Electricals</div>
+                        <div class="company-address">Kulithalai</div>
+                        <div class="company-contact">8883114268</div>
                     </div>
                     <div class="divider"></div>
                     <div class="row">
@@ -540,6 +540,7 @@ export default {
                     <div class="footer">
                         <div class="footer-text">Thank you for your business!</div>
                         <div class="footer-text">Visit us at hbitpartner.com</div>
+                        <div class="footer-text">Your IT Partner</div>
                     </div>
                     <div class="divider-thick"></div>
                     <div style="height: 20mm;"></div>
