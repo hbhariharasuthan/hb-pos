@@ -8,6 +8,7 @@ use App\Services\ImportService;
 use App\Imports\BrandImport;
 use App\Imports\CategoryImport;
 use App\Imports\CustomerImport;
+use App\Imports\ProductImport;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;

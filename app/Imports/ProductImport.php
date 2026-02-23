@@ -10,18 +10,19 @@ class ProductImport extends BaseImport
 {
     protected array $importedRows = [];
 
+    // Must match BaseImport signature: array $row, returns void
     protected function model(array $row): void
     {
-        // Skip completely empty rows or missing required 'name' or 'sku'
+        // Skip empty rows or missing required 'name' or 'sku'
         if (empty(array_filter($row)) || empty($row['name']) || empty($row['sku'])) {
-            return; // skip invalid row
+            return;
         }
 
-        // Get related category and brand IDs
+        // Find category and brand IDs
         $categoryId = $this->getCategoryId($row['category_code'] ?? null);
-        $brandId    = $this->getBrandId($row['brand_code'] ?? null);
+        $brandId = $this->getBrandId($row['brand_code'] ?? null);
 
-        // Insert or update product based on SKU
+        // Insert or update product
         Product::updateOrCreate(
             ['sku' => $row['sku']],
             [
@@ -43,21 +44,16 @@ class ProductImport extends BaseImport
         $this->importedRows[] = $row;
     }
 
-    // Helper to get category ID by code
     private function getCategoryId(?string $code): ?int
     {
-        if (!$code) return null;
-        return Category::where('code', $code)->value('id');
+        return $code ? Category::where('code', $code)->value('id') : null;
     }
 
-    // Helper to get brand ID by code
     private function getBrandId(?string $code): ?int
     {
-        if (!$code) return null;
-        return Brand::where('code', $code)->value('id');
+        return $code ? Brand::where('code', $code)->value('id') : null;
     }
 
-    // Return import result
     public function result(): array
     {
         return [

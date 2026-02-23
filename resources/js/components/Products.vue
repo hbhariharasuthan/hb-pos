@@ -2,7 +2,10 @@
     <div class="products-container">
         <div class="page-header">
             <h1>Products Management</h1>
+            <div class="action-bar">
             <button @click="showModal = true" class="btn btn-primary">Add Product</button>
+            <button class="btn outline" @click="showImport = true">Import Products</button>
+            </div>
         </div>
 
         <div class="filters">
@@ -155,6 +158,11 @@
                 </form>
             </div>
         </div>
+        <ImportModal
+            :show="showImport"
+            type="products"
+            @close="showImport = false"
+        />
     </div>
 </template>
 
@@ -164,17 +172,19 @@ import axios from 'axios';
 import { toId } from '../utils/toId.js';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 import PaginatedDropdown from '../components/PaginatedDropdown.vue';
+import ImportModal from './ImportModal.vue';
 
 export default {
     name: 'Products',
      components: {
-     PaginatedDropdown
+     PaginatedDropdown,ImportModal
      },
     setup() {
         const search = ref('');
         const categoryFilter = ref('');
         const brandFilter = ref('');
         const showModal = ref(false);
+        const showImport = ref(false)
         const editingProduct = ref(null);
         const form = ref({
             name: '',
@@ -372,7 +382,8 @@ export default {
             saveProduct,
             deleteProduct,
             isWeightUnit,
-            formatQty
+            formatQty,
+            showImport
         };
     }
 };
@@ -561,4 +572,45 @@ export default {
     background: #6c757d;
     color: white;
 }
+.action-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Primary button */
+.btn.primary {
+    background-color: #2563eb; /* blue */
+    color: white;
+}
+
+.btn.primary:hover {
+    background-color: #1d4ed8;
+}
+
+/* Outline button */
+.btn.outline {
+    background: transparent;
+    color: #2563eb;
+    border: 1px solid #2563eb;
+}
+
+.btn.outline:hover {
+    background-color: #2563eb;
+    color: white;
+}
+
 </style>
