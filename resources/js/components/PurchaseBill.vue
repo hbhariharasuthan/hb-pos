@@ -8,10 +8,10 @@
         <div id="purchase-bill-content" class="bill-content">
             <div class="bill-header">
                 <div class="company-info">
-                    <h1>Vinayaga Electricals</h1>
-                    <p>Kulithalai</p>
-                    <p>6390104</p>
-                    <p>Phone: 8883114268</p>
+                    <h1>{{ client?.name || '' }}</h1>
+                    <p>{{ client?.location || ''  }}</p>
+                    <p>{{ client?.pin || ''  }}</p>
+                    <p>Phone: {{ client?.phone || '' }}</p>
                 </div>
                 <div class="bill-info">
                     <h2>PURCHASE BILL</h2>
@@ -96,6 +96,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
+import { useClientInfo } from '@/composables/useClientInfo.js'
 
 export default {
     name: 'PurchaseBill',
@@ -103,6 +104,7 @@ export default {
         const route = useRoute();
         const router = useRouter();
         const purchase = ref(null);
+        const client = useClientInfo();
 
         const loadBill = async () => {
             try {
@@ -166,7 +168,8 @@ export default {
             formatDate,
             formatQty,
             printBill,
-            goBack
+            goBack,
+            client
         };
     }
 };

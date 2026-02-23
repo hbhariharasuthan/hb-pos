@@ -9,10 +9,10 @@
         <div id="invoice-content" class="invoice-content">
             <div class="invoice-header">
                 <div class="company-info">
-                    <h1>Vinayaga Electricals</h1>
-                    <p>Kulithalai</p>
-                    <p>6390104</p>
-                    <p>Phone: 8883114268</p>
+                    <h1>{{ client?.name || '' }}</h1>
+                    <p>{{ client?.location || ''  }}</p>
+                    <p>{{ client?.pin || ''  }}</p>
+                    <p>Phone: {{ client?.phone || '' }}</p>
                 </div>
                 <div class="invoice-info">
                     <h2>INVOICE</h2>
@@ -96,6 +96,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
+import { useClientInfo } from '@/composables/useClientInfo.js'
 
 export default {
     name: 'Invoice',
@@ -103,7 +104,8 @@ export default {
         const route = useRoute();
         const router = useRouter();
         const sale = ref(null);
-
+        const client = useClientInfo();
+        
         const loadInvoice = async () => {
             try {
                 const response = await axios.get(`/api/sales/${route.params.id}/invoice`);
@@ -198,8 +200,9 @@ export default {
                 </head>
                 <body>
                     <div class="header">
-                        <div class="company-name">Vinayaga Electricals Kulithalai</div>
-                        <div style="font-size: 11px;">8883114268</div>
+                        <div class="company-name">${ client.name }</div>
+                        <div class="company-name">${ client.location }</div>
+                        <div style="font-size: 11px;">${ client?.phone}</div>
                     </div>
                     <div class="divider"></div>
                     <div class="row">
@@ -267,7 +270,8 @@ export default {
             formatItemQty,
             printInvoice,
             printThermalReceipt,
-            goBack
+            goBack,
+            client
         };
     }
 };

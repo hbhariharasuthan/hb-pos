@@ -3,7 +3,7 @@
         <nav v-if="isAuthenticated" class="main-nav">
             <div class="nav-brand">
                 <img src="/client-logo.png" alt="HB Logo" class="logo-img" />
-                <span class="brand-text">Vinayaga Electricals Kulithalai</span>
+                <span class="brand-text">{{ client?.name }}</span>
             </div>
             <div class="nav-links">
                 <router-link to="/dashboard">Dashboard</router-link>
@@ -29,16 +29,19 @@
 <script>
 import { computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
+import { useClientInfo } from '@/composables/useClientInfo.js'
 
 export default {
     name: 'App',
     setup() {
         const authStore = useAuthStore();
         const currentYear = new Date().getFullYear();
-        
+        const client = useClientInfo();
+
         return {
             isAuthenticated: computed(() => authStore.isAuthenticated),
-            currentYear
+            currentYear,
+            client
         };
     },
     async mounted() {

@@ -2,8 +2,8 @@
     <div id="thermal-receipt" class="thermal-receipt" v-if="sale">
         <!-- Company Header -->
         <div class="receipt-header">
-            <div class="company-name">Vinayaga Electricals Kulithalai</div>
-            <div style="font-size: 11px;">8883114268</div>
+            <div class="company-name">{{ client.name }}</div>
+            <div style="font-size: 11px;"> {{ client.phone }}</div>
         </div>
 
         <div class="receipt-divider">--------------------------------</div>
@@ -106,6 +106,8 @@
 </template>
 
 <script>
+import { useClientInfo } from '@/composables/useClientInfo.js'
+
 export default {
     name: 'ThermalReceipt',
     props: {
@@ -114,24 +116,34 @@ export default {
             required: true
         }
     },
-    methods: {
-        formatReceiptDate(date) {
-            if (!date) return '';
-            const d = new Date(date);
+    setup() {
+        const client = useClientInfo()  // ✅ inside setup, reactive and readonly
+
+        const formatReceiptDate = (date) => {
+            if (!date) return ''
+            const d = new Date(date)
             return d.toLocaleDateString('en-IN', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
-            });
-        },
-        truncateText(text, maxLength) {
-            if (!text) return '';
-            return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+            })
+        }
+
+        const truncateText = (text, maxLength) => {
+            if (!text) return ''
+            return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+        }
+
+        return {
+            client,
+            formatReceiptDate,
+            truncateText
         }
     }
-};
+}
+
 </script>
 
 <style scoped>

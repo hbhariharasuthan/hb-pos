@@ -204,6 +204,8 @@ import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import PaginatedDropdown from './PaginatedDropdown.vue';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
+import { useClientInfo } from '@/composables/useClientInfo.js'
+
 
 export default {
     name: 'POS',
@@ -224,6 +226,7 @@ export default {
         const showReceipt = ref(false);
         const categoryFilter = ref('');
         const brandFilter = ref('');
+        const client = useClientInfo();
         const newCustomer = ref({
             name: '',
             phone: '',
@@ -500,9 +503,9 @@ export default {
                 </head>
                 <body>
                     <div class="header">
-                        <div class="company-name">Vinayaga Electricals</div>
-                        <div class="company-address">Kulithalai</div>
-                        <div class="company-contact">8883114268</div>
+                        <div class="company-name">${ client?.name }</div>
+                        <div class="company-address">${ client?.location }</div>
+                        <div class="company-contact">${ client?.phone}</div>
                     </div>
                     <div class="divider"></div>
                     <div class="row">
@@ -710,7 +713,8 @@ export default {
             processSale,
             printThermalReceipt,
             categoryFilter,
-            brandFilter
+            brandFilter,
+            client
         };
     }
 };
