@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\ImportService;
 use App\Imports\BrandImport;
-use App\Imports\ProductImport;
+use App\Imports\CategoryImport;
+use App\Imports\CustomerImport;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -28,6 +29,8 @@ class ImportController extends Controller
         $importClass = match($type) {
             'brands' => BrandImport::class,
             'products' => ProductImport::class,
+            'categories' => CategoryImport::class,
+            'customers' => CustomerImport::class,
             default => null
         };
 

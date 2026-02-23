@@ -9,6 +9,7 @@ abstract class BaseImport implements ToCollection, WithHeadingRow
 {
     protected int $success = 0;
     protected array $errors = [];
+    protected array $skippedRows = [];
 
     abstract protected function model(array $row): void;
 
@@ -16,6 +17,11 @@ abstract class BaseImport implements ToCollection, WithHeadingRow
     {
         foreach ($rows as $index => $row) {
             try {
+                if (empty(array_filter($row->toArray()))) {
+                    $this->skippedRows[] = $index + 2; // store row number
+                    continue;
+                }
+    
                 $this->model($row->toArray());
                 $this->success++;
             } catch (\Throwable $e) {
@@ -31,6 +37,7 @@ abstract class BaseImport implements ToCollection, WithHeadingRow
     {
         return [
             'success' => $this->success,
+            'skipped' => $this->skippedRows,
             'errors'  => $this->errors,
         ];
     }
