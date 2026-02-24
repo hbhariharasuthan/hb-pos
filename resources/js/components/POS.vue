@@ -634,6 +634,21 @@ export default {
                     discount: 0
                 }));
 
+                // Validate credit limit before processing
+                if (paymentMethod.value === 'credit' && selectedCustomer.value) {
+                    // Check if customer has sufficient credit
+                    const customerResponse = await axios.get(`/api/customers/${selectedCustomer.value.id}`);
+                    const customer = customerResponse.data;
+                    const availableCredit = parseFloat(customer.credit_limit) - parseFloat(customer.balance);
+                    const saleTotal = total.value;
+
+                    if (saleTotal > availableCredit) {
+                        handleApiError(`Insufficient credit limit. Available balance: ₹${availableCredit.toFixed(2)}`);
+                        processing.value = false;
+                        return;
+                    }
+                }
+
                 const response = await axios.post('/api/pos/sale', {
                     customer_id: selectedCustomer.value?.id || null,
                     items,

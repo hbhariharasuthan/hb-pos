@@ -8,6 +8,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\StockMovement;
 use App\Models\Customer;
+use App\Services\SaleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -77,6 +78,14 @@ class POSController extends Controller
 
             DB::beginTransaction();
 
+            // Validate credit limit before processing sale
+            $saleService = new SaleService();
+            $saleService->validateCreditLimit(
+                $validated['customer_id'],
+                $total,
+                $validated['payment_method']
+            );
+
             $subtotal = 0;
             $items = [];
 
@@ -124,6 +133,9 @@ class POSController extends Controller
                 'status' => 'completed',
                 'notes' => $validated['notes'] ?? null,
             ]);
+
+            // Process credit sale and update customer balance
+            $saleService->processCreditSale($sale);
 
             foreach ($items as $item) {
                 SaleItem::create([

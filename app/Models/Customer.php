@@ -32,4 +32,20 @@ class Customer extends Model
     {
         return $this->hasMany(Purchase::class, 'supplier_id');
     }
+
+    /**
+     * Calculate available credit for customer
+     */
+    public function getAvailableCreditAttribute(): float
+    {
+        return (float) $this->credit_limit - (float) $this->balance;
+    }
+
+    /**
+     * Check if customer has sufficient credit for a given amount
+     */
+    public function hasSufficientCredit(float $amount): bool
+    {
+        return $this->getAvailableCreditAttribute() >= $amount;
+    }
 }
