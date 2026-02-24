@@ -204,6 +204,8 @@ import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import PaginatedDropdown from './PaginatedDropdown.vue';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
+import { useClientInfo } from '@/composables/useClientInfo.js'
+
 
 export default {
     name: 'POS',
@@ -224,6 +226,7 @@ export default {
         const showReceipt = ref(false);
         const categoryFilter = ref('');
         const brandFilter = ref('');
+        const client = useClientInfo();
         const newCustomer = ref({
             name: '',
             phone: '',
@@ -500,9 +503,9 @@ export default {
                 </head>
                 <body>
                     <div class="header">
-                        <div class="company-name">Vinayaga Electricals Kulithalai</div>
-                        <div class="company-address">hbitpartner.com</div>
-                        <div class="company-contact">Your IT Partner</div>
+                        <div class="company-name">${ client?.name }</div>
+                        <div class="company-address">${ client?.location }</div>
+                        <div class="company-contact">${ client?.phone}</div>
                     </div>
                     <div class="divider"></div>
                     <div class="row">
@@ -540,6 +543,7 @@ export default {
                     <div class="footer">
                         <div class="footer-text">Thank you for your business!</div>
                         <div class="footer-text">Visit us at hbitpartner.com</div>
+                        <div class="footer-text">Your IT Partner</div>
                     </div>
                     <div class="divider-thick"></div>
                     <div style="height: 20mm;"></div>
@@ -595,17 +599,24 @@ export default {
                     email: newCustomer.value.email || null
                 });
 
-                const createdCustomer = response.data;
-                selectCustomer(createdCustomer);
-                alert('Customer added successfully!');
+                // 🔥 IMPORTANT: adjust based on your API structure
+                const createdCustomer = response.data.customer || response.data.data || response.data;
+
+                // Automatically select the created customer
+                selectedCustomer.value = createdCustomer;
+
+                // Close modal
+                showCustomerModal.value = false;
+                showAddCustomerForm.value = false;
+
+                // Reset form
+                newCustomer.value = { name: '', phone: '', email: '' };
+
+                alert('Customer added and selected successfully!');
+
             } catch (error) {
                 const message = error.response?.data?.message || 'Error adding customer';
-                const errors = error.response?.data?.errors;
-                if (errors) {
-                    alert(message + ': ' + JSON.stringify(errors));
-                } else {
-                    alert(message);
-                }
+                alert(message);
             }
         };
 
@@ -709,7 +720,8 @@ export default {
             processSale,
             printThermalReceipt,
             categoryFilter,
-            brandFilter
+            brandFilter,
+            client
         };
     }
 };

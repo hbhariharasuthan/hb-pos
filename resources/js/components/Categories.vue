@@ -2,9 +2,11 @@
     <div class="categories-container">
         <div class="page-header">
             <h1>Categories Management</h1>
+            <div class="action-bar">
             <button @click="showModal = true" class="btn btn-primary">Add Category</button>
+            <button class="btn outline" @click="showImport = true">Import Category</button>
         </div>
-
+        </div>
         <div class="filters">
             <input v-model="search" type="text" placeholder="Search categories..." class="search-input" />
             <select v-model="statusFilter" class="select-input">
@@ -81,6 +83,11 @@
                 </form>
             </div>
         </div>
+        <ImportModal
+            :show="showImport"
+            type="categories"
+            @close="showImport = false"
+        />
     </div>
 </template>
 
@@ -88,13 +95,18 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
+import ImportModal from './ImportModal.vue';
 
 export default {
     name: 'Categories',
+    components: {
+        ImportModal   // ✅ REQUIRED
+    },
     setup() {
         const search = ref('');
         const statusFilter = ref('');
         const showModal = ref(false);
+        const showImport = ref(false)
         const editingCategory = ref(null);
         const form = ref({
             name: '',
@@ -213,7 +225,8 @@ export default {
             filteredCategories,
             editCategory,
             saveCategory,
-            deleteCategory
+            deleteCategory,
+            showImport
         };
     }
 };
@@ -399,6 +412,47 @@ export default {
 
 .btn-secondary {
     background: #6c757d;
+    color: white;
+}
+
+.action-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Primary button */
+.btn.primary {
+    background-color: #2563eb; /* blue */
+    color: white;
+}
+
+.btn.primary:hover {
+    background-color: #1d4ed8;
+}
+
+/* Outline button */
+.btn.outline {
+    background: transparent;
+    color: #2563eb;
+    border: 1px solid #2563eb;
+}
+
+.btn.outline:hover {
+    background-color: #2563eb;
     color: white;
 }
 </style>
