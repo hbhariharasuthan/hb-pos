@@ -599,17 +599,24 @@ export default {
                     email: newCustomer.value.email || null
                 });
 
-                const createdCustomer = response.data;
-                selectCustomer(createdCustomer);
-                alert('Customer added successfully!');
+                // 🔥 IMPORTANT: adjust based on your API structure
+                const createdCustomer = response.data.customer || response.data.data || response.data;
+
+                // Automatically select the created customer
+                selectedCustomer.value = createdCustomer;
+
+                // Close modal
+                showCustomerModal.value = false;
+                showAddCustomerForm.value = false;
+
+                // Reset form
+                newCustomer.value = { name: '', phone: '', email: '' };
+
+                alert('Customer added and selected successfully!');
+
             } catch (error) {
                 const message = error.response?.data?.message || 'Error adding customer';
-                const errors = error.response?.data?.errors;
-                if (errors) {
-                    alert(message + ': ' + JSON.stringify(errors));
-                } else {
-                    alert(message);
-                }
+                alert(message);
             }
         };
 
