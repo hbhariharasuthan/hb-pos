@@ -96,7 +96,7 @@
                         <label>Credit Limit</label>
                         <input v-model.number="form.credit_limit" type="number" step="0.01" />
                     </div>
-                    <div class="form-group" v-if="!editingCustomer">
+                    <div class="form-group">
                         <label>Opening Balance *</label>
                         <input v-model.number="form.opening_balance" type="number" step="0.01" min="0" required />
                     </div>
