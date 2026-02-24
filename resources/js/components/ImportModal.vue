@@ -46,6 +46,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import axios from 'axios'
+import { handleApiError } from '@/utils/errorHandler';
 
 const props = defineProps({
   show: Boolean,
@@ -80,7 +81,7 @@ const downloadSample = async () => {
 
     window.URL.revokeObjectURL(url)
   } catch (error) {
-    alert('Sample download failed')
+    handleApiError('Sample download failed')
     console.error(error)
   }
 }

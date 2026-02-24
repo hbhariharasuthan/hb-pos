@@ -205,6 +205,7 @@ import axios from 'axios';
 import PaginatedDropdown from './PaginatedDropdown.vue';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 import { useClientInfo } from '@/composables/useClientInfo.js'
+import { handleApiError } from '@/utils/errorHandler';
 
 
 export default {
@@ -334,7 +335,7 @@ export default {
         const addToCart = (product) => {
             const stock = parseFloat(product.stock_quantity);
             if (stock <= 0) {
-                alert('Product out of stock');
+                handleApiError('Product out of stock');
                 return;
             }
             const unit = product.unit || 'pcs';
@@ -346,7 +347,7 @@ export default {
                 if (newQty <= stock) {
                     existingItem.quantity = isWeightUnit(unit) ? parseFloat(newQty.toFixed(3)) : Math.floor(newQty);
                 } else {
-                    alert('Insufficient stock. Available: ' + formatQty(stock, unit) + ' ' + unit);
+                    handleApiError('Insufficient stock. Available: ' + formatQty(stock, unit) + ' ' + unit);
                 }
             } else {
                 const startQty = isWeightUnit(unit) ? 0.5 : 1;
@@ -379,7 +380,7 @@ export default {
             }
             const stock = parseFloat(item.product.stock_quantity);
             if (newQuantity > stock) {
-                alert('Insufficient stock. Available: ' + formatQty(stock, item.unit) + ' ' + item.unit);
+                handleApiError('Insufficient stock. Available: ' + formatQty(stock, item.unit) + ' ' + item.unit);
                 return;
             }
             item.quantity = isWeightUnit(item.unit) ? parseFloat(Number(newQuantity).toFixed(3)) : Math.floor(newQuantity);
@@ -588,7 +589,7 @@ export default {
 
         const addNewCustomer = async () => {
             if (!newCustomer.value.name || !newCustomer.value.phone) {
-                alert('Please enter customer name and phone number');
+                handleApiError('Please enter customer name and phone number');
                 return;
             }
 
@@ -612,11 +613,11 @@ export default {
                 // Reset form
                 newCustomer.value = { name: '', phone: '', email: '' };
 
-                alert('Customer added and selected successfully!');
+                handleApiError('Customer added and selected successfully!');
 
             } catch (error) {
                 const message = error.response?.data?.message || 'Error adding customer';
-                alert(message);
+                handleApiError(message);
             }
         };
 
@@ -649,7 +650,7 @@ export default {
                 selectedCustomer.value = null;
                 
                 // Show success message briefly, then auto-print receipt
-                alert('Sale completed successfully! Invoice: ' + response.data.sale.invoice_number + '\n\nPrinting receipt...');
+                handleApiError('Sale completed successfully! Invoice: ' + response.data.sale.invoice_number + '\n\nPrinting receipt...');
                 
                 // Automatically trigger thermal receipt print
                 setTimeout(() => {
@@ -659,9 +660,9 @@ export default {
                 const message = error.response?.data?.message || 'Error processing sale';
                 const errors = error.response?.data?.errors;
                 if (errors) {
-                    alert(message + ': ' + JSON.stringify(errors));
+                    handleApiError(message + ': ' + JSON.stringify(errors));
                 } else {
-                    alert(message);
+                    handleApiError(message);
                 }
             } finally {
                 processing.value = false;

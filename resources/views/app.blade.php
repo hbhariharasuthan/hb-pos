@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name', 'Laravel') }}</title>
-    @vite(['resources/js/app.js'])
     <script>
         window.CLIENT_INFO = @json(config('client'));
    </script>
+    @vite(['resources/js/app.js'])
 </head>
 <body>
     <div id="app"></div>

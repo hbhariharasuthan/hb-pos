@@ -97,6 +97,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useClientInfo } from '@/composables/useClientInfo.js'
+import { handleApiError } from '@/utils/errorHandler';
 
 export default {
     name: 'Invoice',
@@ -112,7 +113,7 @@ export default {
                 sale.value = response.data;
             } catch (error) {
                 console.error('Error loading invoice:', error);
-                alert('Error loading invoice');
+                handleApiError('Error loading invoice');
             }
         };
 

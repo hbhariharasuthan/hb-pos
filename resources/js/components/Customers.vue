@@ -120,6 +120,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 import ImportModal from './ImportModal.vue';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default {
     name: 'Customers',
@@ -232,7 +233,7 @@ export default {
                 showModal.value = false;
                 resetForm();
             } catch (error) {
-                alert(error.response?.data?.message || 'Error saving customer');
+                handleApiError(error);
             }
         };
 
@@ -241,8 +242,9 @@ export default {
             try {
                 await axios.delete(`/api/customers/${id}`);
                 loadInitial(); // Reload from page 1
+                handleApiError("Record deleted");
             } catch (error) {
-                alert(error.response?.data?.message || 'Error deleting customer');
+                handleApiError(error);
             }
         };
 

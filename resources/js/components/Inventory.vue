@@ -221,6 +221,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default {
     name: 'Inventory',
@@ -338,7 +339,7 @@ export default {
                 showLowStockModal.value = true;
             } catch (error) {
                 console.error('Error loading low stock:', error);
-                alert('Error loading low stock alerts');
+                handleApiError('Error loading low stock alerts');
             }
         };
 
@@ -398,16 +399,16 @@ export default {
                 };
 
                 await axios.post('/api/stock/adjust', payload);
-                alert('Stock adjusted successfully');
+                handleApiError('Stock adjusted successfully');
                 await loadInventory();
                 closeAdjustModal();
             } catch (error) {
                 const message = error.response?.data?.message || 'Error adjusting stock';
                 const errors = error.response?.data?.errors;
                 if (errors) {
-                    alert(message + ': ' + JSON.stringify(errors));
+                    handleApiError(message + ': ' + JSON.stringify(errors));
                 } else {
-                    alert(message);
+                    handleApiError(message);
                 }
             }
         };
@@ -426,7 +427,7 @@ export default {
                 showHistoryModal.value = true;
             } catch (error) {
                 console.error('Error loading history:', error);
-                alert('Error loading stock history');
+                handleApiError('Error loading stock history');
             }
         };
 

@@ -326,6 +326,7 @@
 <script>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default {
     name: 'Reports',
@@ -375,7 +376,7 @@ export default {
                 }
             } catch (error) {
                 console.error('Error loading report:', error);
-                alert('Error loading report');
+                handleApiError('Error loading report');
             }
         };
 
@@ -418,7 +419,7 @@ export default {
                 // Clean up
                 setTimeout(() => window.URL.revokeObjectURL(url), 100);
             } else {
-                alert('No data available to export');
+                handleApiError('No data available to export');
             }
         };
 
