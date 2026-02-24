@@ -1,5 +1,6 @@
 import { reactive } from 'vue';
 import axios from 'axios';
+import { handleApiError } from '@/utils/errorHandler';
 
 const authStore = reactive({
     user: null,

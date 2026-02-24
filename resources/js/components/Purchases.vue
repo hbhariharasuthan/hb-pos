@@ -259,7 +259,7 @@ export default {
         const savePurchase = async () => {
             const items = form.value.items.filter(i => i.product_id && i.quantity > 0 && i.unit_cost >= 0);
             if (!items.length) {
-                alert('Add at least one item.');
+                handleApiError('Add at least one item.');
                 return;
             }
             saving.value = true;
@@ -288,7 +288,7 @@ export default {
                 };
                 loadInitial();
             } catch (err) {
-                alert(err.response?.data?.message || err.response?.data?.error || 'Failed to save purchase');
+                handleApiError(err.response?.data?.message || err.response?.data?.error || 'Failed to save purchase');
             } finally {
                 saving.value = false;
             }

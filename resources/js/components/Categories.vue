@@ -96,6 +96,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 import ImportModal from './ImportModal.vue';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default {
     name: 'Categories',
@@ -157,7 +158,7 @@ export default {
                 showModal.value = false;
                 resetForm();
             } catch (error) {
-                alert(error.response?.data?.message || 'Error saving category');
+                handleApiError(error);
             }
         };
 
@@ -166,8 +167,9 @@ export default {
             try {
                 await axios.delete(`/api/categories/${id}`);
                 loadInitial();
+                handleApiError("Record deleted");
             } catch (error) {
-                alert(error.response?.data?.message || 'Error deleting category');
+                handleApiError(error);
             }
         };
 

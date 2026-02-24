@@ -112,7 +112,7 @@ export default {
                 purchase.value = r.data;
             } catch (e) {
                 console.error(e);
-                alert('Error loading purchase bill');
+                handleApiError('Error loading purchase bill');
             }
         };
 

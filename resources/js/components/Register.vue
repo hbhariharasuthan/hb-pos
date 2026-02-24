@@ -82,6 +82,7 @@ import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default {
     name: 'Register',

@@ -17,6 +17,8 @@ import Purchases from './components/Purchases.vue';
 import PurchaseBill from './components/PurchaseBill.vue';
 import Reports from './components/Reports.vue';
 import { useAuthStore } from './stores/auth';
+import Toast from "vue-toastification";
+import "vue-toastification/dist/index.css";
 
 const routes = [
     { path: '/', redirect: '/login' },
@@ -55,4 +57,10 @@ router.beforeEach((to, from, next) => {
 
 const app = createApp(App);
 app.use(router);
+app.use(Toast, {
+    position: "top-right",
+    timeout: 3000,
+    closeOnClick: true,
+    pauseOnHover: true,
+});
 app.mount('#app');

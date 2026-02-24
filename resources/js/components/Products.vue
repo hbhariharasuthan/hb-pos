@@ -173,6 +173,7 @@ import { toId } from '../utils/toId.js';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 import PaginatedDropdown from '../components/PaginatedDropdown.vue';
 import ImportModal from './ImportModal.vue';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default {
     name: 'Products',
@@ -305,7 +306,7 @@ export default {
                 showModal.value = false;
                 resetForm();
             } catch (error) {
-                alert(error.response?.data?.message || 'Error saving product');
+                handleApiError(error);
             }
         };
 
@@ -314,8 +315,9 @@ export default {
             try {
                 await axios.delete(`/api/products/${id}`);
                 loadInitial(); // Reload from page 1
+                handleApiError("Record deleted");
             } catch (error) {
-                alert(error.response?.data?.message || 'Error deleting product');
+                handleApiError(error);
             }
         };
 
