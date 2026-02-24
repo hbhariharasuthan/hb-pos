@@ -1,12 +1,13 @@
 import { reactive, readonly } from 'vue'
+const clientInfo = window.CLIENT_INFO ?? {};
 
 const state = reactive({
-  logo: window.CLIENT_INFO.logo ?? null,
-  name: window.CLIENT_INFO.name,
-  location: window.CLIENT_INFO.location,
-  pin: window.CLIENT_INFO.pin,
-  phone: window.CLIENT_INFO.phone,
-})
+  logo: clientInfo.logo ?? null,
+  name: clientInfo.name ?? '',
+  location: clientInfo.location ?? '',
+  pin: clientInfo.pin ?? '',
+  phone: clientInfo.phone ?? '',
+});
 
 export const useClientInfo = () => {
   return readonly(state)
