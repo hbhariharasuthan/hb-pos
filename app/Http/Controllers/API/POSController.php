@@ -78,14 +78,6 @@ class POSController extends Controller
 
             DB::beginTransaction();
 
-            // Validate credit limit before processing sale
-            $saleService = new SaleService();
-            $saleService->validateCreditLimit(
-                $validated['customer_id'],
-                $total,
-                $validated['payment_method']
-            );
-
             $subtotal = 0;
             $items = [];
 
@@ -119,6 +111,14 @@ class POSController extends Controller
             $taxRate = $validated['tax_rate'] ?? 0;
             $taxAmount = ($subtotal - $discount) * ($taxRate / 100);
             $total = $subtotal - $discount + $taxAmount;
+
+            // Validate credit limit before processing sale
+            $saleService = new SaleService();
+            $saleService->validateCreditLimit(
+                $validated['customer_id'],
+                $total,
+                $validated['payment_method']
+            );
 
             $sale = Sale::create([
                 'customer_id' => $validated['customer_id'] ?? null,
