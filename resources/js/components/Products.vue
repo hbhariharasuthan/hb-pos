@@ -169,6 +169,7 @@
 <script>
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { useToast } from 'vue-toastification';
 import { toId } from '../utils/toId.js';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 import PaginatedDropdown from '../components/PaginatedDropdown.vue';
@@ -181,6 +182,7 @@ export default {
      PaginatedDropdown,ImportModal
      },
     setup() {
+        const toast = useToast();
         const search = ref('');
         const categoryFilter = ref('');
         const brandFilter = ref('');
@@ -315,7 +317,7 @@ export default {
             try {
                 await axios.delete(`/api/products/${id}`);
                 loadInitial(); // Reload from page 1
-                handleApiError("Record deleted");
+                toast.success('Product deleted successfully');
             } catch (error) {
                 handleApiError(error);
             }

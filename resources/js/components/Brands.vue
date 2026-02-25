@@ -96,6 +96,7 @@
 <script>
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { useToast } from 'vue-toastification';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 import ImportModal from './ImportModal.vue';
 import { handleApiError } from '@/utils/errorHandler';
@@ -106,6 +107,7 @@ export default {
         ImportModal   // ✅ REQUIRED
     },
     setup() {
+        const toast = useToast();
         const search = ref('');
         const statusFilter = ref('');
         const showModal = ref(false);
@@ -167,7 +169,7 @@ export default {
             try {
                 await axios.delete(`/api/brands/${id}`);
                 loadInitial();
-                handleApiError("Record deleted");
+                toast.success('Brand deleted successfully');
             } catch (error) {
                 handleApiError(error);
             }

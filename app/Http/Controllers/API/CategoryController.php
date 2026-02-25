@@ -84,6 +84,18 @@ class CategoryController extends Controller
     public function destroy($id)
     {
         $category = Category::findOrFail($id);
+        
+        // Check if category has any active products
+        $activeProductsCount = $category->products()
+            ->where('is_active', true)
+            ->count();
+        
+        if ($activeProductsCount > 0) {
+            throw ValidationException::withMessages([
+                'category_id' => 'This category has ' . $activeProductsCount . ' active product(s). Please deactivate or delete the products first.',
+            ]);
+        }
+        
         $category->delete();
         return response()->json(['message' => 'Category deleted successfully']);
     }
