@@ -124,6 +124,28 @@ class ProductController extends Controller
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
+        
+        // Check if product has any purchase references
+        $purchaseItemsCount = $product->purchaseItems()->count();
+        
+        // Check if product has any sale references
+        $saleItemsCount = $product->saleItems()->count();
+        
+        if ($purchaseItemsCount > 0 || $saleItemsCount > 0) {
+            $message = '';
+            if ($purchaseItemsCount > 0 && $saleItemsCount > 0) {
+                $message = 'This product has ' . $purchaseItemsCount . ' purchase reference(s) and ' . $saleItemsCount . ' sale reference(s). Please remove the product from these transactions first.';
+            } elseif ($purchaseItemsCount > 0) {
+                $message = 'This product has ' . $purchaseItemsCount . ' purchase reference(s). Please remove the product from these purchases first.';
+            } else {
+                $message = 'This product has ' . $saleItemsCount . ' sale reference(s). Please remove the product from these sales first.';
+            }
+            
+            throw ValidationException::withMessages([
+                'product_id' => $message,
+            ]);
+        }
+        
         $product->delete();
 
         return response()->json(['message' => 'Product deleted successfully']);

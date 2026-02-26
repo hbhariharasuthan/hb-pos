@@ -87,6 +87,18 @@ class BrandController extends Controller
     public function destroy($id)
     {
         $brand = Brand::findOrFail($id);
+        
+        // Check if brand has any active products
+        $activeProductsCount = $brand->products()
+            ->where('is_active', true)
+            ->count();
+        
+        if ($activeProductsCount > 0) {
+            throw ValidationException::withMessages([
+                'brand_id' => 'This brand has ' . $activeProductsCount . ' active product(s). Please deactivate or delete the products first.',
+            ]);
+        }
+        
         $brand->delete();
 
         return response()->json(['message' => 'Brand deleted successfully']);
