@@ -5,7 +5,7 @@
   "private": true,
   "main": "electron/main.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"php artisan serve --host=127.0.0.1 --port=8000\" \"vite\"",
     "build": "vite build",
     "electron": "electron .",
     "build:mac": "electron-builder --mac",
@@ -14,6 +14,7 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.5.0",
     "axios": "^1.1.2",
+    "concurrently": "^9.2.1",
     "electron": "^40.6.0",
     "electron-builder": "^26.8.1",
     "laravel-vite-plugin": "^0.8.0",
