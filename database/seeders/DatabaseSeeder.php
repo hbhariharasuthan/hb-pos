@@ -83,6 +83,9 @@ class DatabaseSeeder extends Seeder
         }
 
 
+        // Seed GST slabs first (required by products)
+        $this->call(GstSlabSeeder::class);
+
         // Seed products using ProductSeeder (500 electrical products)
         $this->call(ProductSeeder::class);
 

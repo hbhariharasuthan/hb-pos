@@ -85,31 +85,39 @@ export function usePaginatedDropdown(endpoint, options = {}) {
             const response = await axios.get(endpoint, { params });
             const responseData = response.data;
 
-            // Handle Laravel pagination response
-            if (responseData.data && Array.isArray(responseData.data)) {
-                const mappedData = mapData(responseData.data);
-                // Filter out null/undefined items to prevent errors
-                const validData = mappedData.filter(item => item != null && (typeof item === 'object' ? item.id != null : true));
-                
+            // Normalize: extract array from various response shapes (Laravel paginate, direct array, etc.)
+            let rawItems = null;
+            let isPaginated = false;
+
+            if (responseData?.data && Array.isArray(responseData.data)) {
+                rawItems = responseData.data;
+                isPaginated = true;
+            } else if (Array.isArray(responseData)) {
+                rawItems = responseData;
+            } else if (responseData?.data && typeof responseData.data === 'object' && !Array.isArray(responseData.data)) {
+                // Some APIs wrap as { data: { 0: item, 1: item } } - convert to array
+                rawItems = Object.values(responseData.data);
+            } else if (responseData?.items && Array.isArray(responseData.items)) {
+                // Paginators that use 'items' key
+                rawItems = responseData.items;
+                isPaginated = true;
+            }
+
+            if (rawItems) {
+                const mappedData = mapData(rawItems);
+                const validData = mappedData.filter(item => item != null && (typeof item === 'object' ? (item.id != null || item.id === 0) : true));
+
                 if (append) {
                     items.value = [...items.value, ...validData];
                 } else {
                     items.value = validData;
                 }
 
-                currentPage.value = responseData.current_page || page;
-                lastPage.value = responseData.last_page || 1;
-                total.value = responseData.total || validData.length;
-            } else if (Array.isArray(responseData)) {
-                // Handle non-paginated response (fallback)
-                const mappedData = mapData(responseData);
-                // Filter out null/undefined items to prevent errors
-                const validData = mappedData.filter(item => item != null && (typeof item === 'object' ? item.id != null : true));
-                items.value = append ? [...items.value, ...validData] : validData;
-                currentPage.value = 1;
-                lastPage.value = 1;
-                total.value = validData.length;
+                currentPage.value = isPaginated ? (responseData.current_page || page) : 1;
+                lastPage.value = isPaginated ? (responseData.last_page || 1) : 1;
+                total.value = isPaginated ? (responseData.total ?? validData.length) : validData.length;
             } else {
+                console.warn('Unexpected response format from', endpoint, ':', responseData);
                 throw new Error('Unexpected response format');
             }
         } catch (err) {

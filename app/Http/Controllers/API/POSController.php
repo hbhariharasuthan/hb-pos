@@ -30,7 +30,7 @@ class POSController extends Controller
     {
         $query = Product::where('is_active', true)
             ->where('stock_quantity', '>', 0)
-            ->with('category');
+            ->with(['category', 'gstSlab']);
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -77,7 +77,7 @@ class POSController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.discount' => 'nullable|numeric|min:0',
-            'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'items.*.gst_percent' => 'nullable|numeric|min:0|max:100',
             'discount' => 'nullable|numeric|min:0',
             'payment_method' => 'required|in:cash,card,credit,mixed',
             'notes' => 'nullable|string',
@@ -90,7 +90,7 @@ class POSController extends Controller
         $editable = ConfigService::viewTotalEditable();           // ← respect flag
 
         foreach ($validated['items'] as $itemData) {
-            $product = Product::findOrFail($itemData['product_id']);
+            $product = Product::with('gstSlab')->findOrFail($itemData['product_id']);
 
             if ($product->stock_quantity < $itemData['quantity']) {
                 throw ValidationException::withMessages([
@@ -104,8 +104,8 @@ class POSController extends Controller
 
             $itemSubtotal   = $itemData['quantity'] * $unitPrice;
             $itemDiscount   = $itemData['discount'] ?? 0;
-            $itemTaxRate    = $validated['tax_rate'] ?? 0;
-            $itemTaxAmount  = ($itemSubtotal - $itemDiscount) * ($itemTaxRate / 100);
+            $gstPercent     = (float) ($itemData['gst_percent'] ?? $product->gstSlab?->gst_percent ?? 0);
+            $itemTaxAmount  = ($itemSubtotal - $itemDiscount) * ($gstPercent / 100);
             $itemTotal      = $itemSubtotal - $itemDiscount + $itemTaxAmount;
 
             $subtotal += $itemSubtotal;
@@ -115,14 +115,17 @@ class POSController extends Controller
                 'unit_price' => $unitPrice,
                 'subtotal'   => $itemSubtotal,
                 'discount'   => $itemDiscount,
+                'tax_rate'   => $gstPercent,
                 'tax_amount' => $itemTaxAmount,
                 'total'      => $itemTotal,
             ];
         }
 
         $discount = $validated['discount'] ?? 0;
-        $taxRate = $validated['tax_rate'] ?? 0;
-        $taxAmount = ($subtotal - $discount) * ($taxRate / 100);
+        $taxAmount = collect($items)->sum('tax_amount');
+        $taxRate = ($subtotal - $discount) > 0
+            ? round(($taxAmount / ($subtotal - $discount)) * 100, 2)
+            : 0;
         $total = $subtotal - $discount + $taxAmount;
 
         // Validate credit limit before processing sale
@@ -155,9 +158,9 @@ class POSController extends Controller
                 'sale_id'    => $sale->id,
                 'product_id' => $item['product']->id,
                 'quantity'   => $item['data']['quantity'],
-                'unit_price' => $item['unit_price'],     // edited price persisted
+                'unit_price' => $item['unit_price'],
                 'discount'   => $item['discount'],
-                'tax_rate'   => $taxRate,
+                'tax_rate'   => $item['tax_rate'],
                 'tax_amount' => $item['tax_amount'],
                 'subtotal'   => $item['subtotal'],
                 'total'      => $item['total'],
@@ -180,7 +183,7 @@ class POSController extends Controller
 
         return response()->json([
             'message' => 'Sale processed successfully',
-            'sale' => $sale->load(['items.product', 'customer', 'user']),
+            'sale' => $sale->load(['items.product.gstSlab', 'customer', 'user']),
         ], 201);
     }
 }

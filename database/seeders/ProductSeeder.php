@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
+use App\Models\GstSlab;
 
 class ProductSeeder extends Seeder
 {
@@ -60,6 +61,34 @@ class ProductSeeder extends Seeder
             );
             $categoryIds[$catName] = $category->id;
         }
+
+        /* ===============================
+         | 2b. GST SLABS (HSN → slab id)
+         ===============================*/
+        $gstSlabByHsn = [
+            '8544' => GstSlab::where('hsn_code', '8544')->first()?->id,
+            '8536' => GstSlab::where('hsn_code', '8536')->first()?->id,
+            '8539' => GstSlab::where('hsn_code', '8539')->first()?->id,
+            '8414' => GstSlab::where('hsn_code', '8414')->first()?->id,
+            '3917' => GstSlab::where('hsn_code', '3917')->first()?->id,
+            '7324' => GstSlab::where('hsn_code', '7324')->first()?->id,
+            '8413' => GstSlab::where('hsn_code', '8413')->first()?->id,
+            '3506' => GstSlab::where('hsn_code', '3506')->first()?->id,
+            '3925' => GstSlab::where('hsn_code', '3925')->first()?->id,
+            '6810' => GstSlab::where('hsn_code', '6810')->first()?->id,
+        ];
+        $categoryToHsn = [
+            'Wires & Cables' => '8544',
+            'Switches & Sockets' => '8536',
+            'Lighting' => '8539',
+            'Fans' => '8414',
+            'Pipes & Fittings' => '3917',
+            'Bathroom Sanitary' => '7324',
+            'Water Tanks' => '3925',
+            'Motors & Pumps' => '8413',
+            'Building Materials' => '3506',
+            'Electrical Accessories' => '8536',
+        ];
 
         /* ===============================
          | 3. PRODUCT TEMPLATES
@@ -127,12 +156,16 @@ class ProductSeeder extends Seeder
                     $cost * 1.25
                 );
 
+                $hsn = $categoryToHsn[$template['category']] ?? '8544';
+                $gstSlabId = $gstSlabByHsn[$hsn] ?? null;
+
                 Product::create([
                     'name' => $name,
                     'sku' => $sku,
                     'barcode' => 'HD' . str_pad(rand(1, 9999999999), 10, '0', STR_PAD_LEFT),
                     'category_id' => $categoryIds[$template['category']],
                     'brand_id' => $brandIds[$template['brand']],
+                    'gst_slab_id' => $gstSlabId,
                     'description' => "{$template['brand']} {$name} – suitable for electrical & plumbing works",
                     'cost_price' => round($cost, 2),
                     'selling_price' => round($price, 2),

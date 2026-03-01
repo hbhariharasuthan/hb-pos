@@ -86,6 +86,7 @@
                         <div v-for="(item, index) in cart" :key="index" class="cart-item">
                             <div class="item-info">
                                 <h4>{{ item.name }}</h4>
+                                <p v-if="item.hsn_code || item.product?.gst_slab?.hsn_code" class="item-hsn">HSN: {{ item.hsn_code || item.product?.gst_slab?.hsn_code }}</p>
                                 <div class="price-row">
                                     <span class="currency">₹</span>
 
@@ -141,10 +142,6 @@
                         <span>Subtotal:</span>
                         <span>₹{{ subtotal.toFixed(2) }}</span>
                     </div>
-                    <div class="summary-row">
-                        <label>Tax Rate (%):</label>
-                        <input v-model.number="taxRate" type="number" min="0" max="100" class="input-small" />
-                    </div>
                     <template v-if="taxAmount > 0">
                         <div class="summary-row">
                             <span>CGST ({{ cgstRate.toFixed(1) }}%):</span>
@@ -155,6 +152,12 @@
                             <span>₹{{ sgstAmount.toFixed(2) }}</span>
                         </div>
                     </template>
+                    <div class="summary-row checkbox-row">
+                        <label class="checkbox-label">
+                            <input v-model="showGstInBill" type="checkbox" />
+                            Show GST details in bill
+                        </label>
+                    </div>
                     <div class="summary-row">
                         <label>Discount:</label>
                         <input v-model.number="discount" type="number" min="0" class="input-small" />
@@ -246,7 +249,6 @@ export default {
         const posConfig = ref({ view_total_editable: false });
         const editingPriceIndex = ref(null);
         const searchQuery = ref('');
-        const taxRate = ref(0);
         const discount = ref(0);
         const paymentMethod = ref('cash');
         const selectedCustomer = ref(null);
@@ -257,6 +259,7 @@ export default {
         const showReceipt = ref(false);
         const categoryFilter = ref('');
         const brandFilter = ref('');
+        const showGstInBill = ref(true);
         const client = useClientInfo();
         const newCustomer = ref({
             name: '',
@@ -298,12 +301,20 @@ export default {
             return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         });
 
+        // Tax from product GST slab: sum of (price × qty × gst_percent/100) per item
         const taxAmount = computed(() => {
-            return (subtotal.value - discount.value) * (taxRate.value / 100);
+            return cart.value.reduce((sum, item) => {
+                const gst = parseFloat(item.gst_percent ?? item.product?.gst_slab?.gst_percent ?? 0);
+                return sum + (item.price * item.quantity * gst) / 100;
+            }, 0);
         });
 
-        const cgstRate = computed(() => (taxRate.value || 0) / 2);
-        const sgstRate = computed(() => (taxRate.value || 0) / 2);
+        const cgstRate = computed(() => {
+            const totalTaxable = subtotal.value - discount.value;
+            if (totalTaxable <= 0) return 0;
+            return (taxAmount.value / totalTaxable) / 2 * 100;
+        });
+        const sgstRate = computed(() => cgstRate.value);
         const cgstAmount = computed(() => (taxAmount.value || 0) / 2);
         const sgstAmount = computed(() => (taxAmount.value || 0) / 2);
 
@@ -388,6 +399,8 @@ export default {
                     original_price: parseFloat(product.selling_price),
                     quantity: startQty,
                     unit: unit,
+                    gst_percent: parseFloat(product.gst_slab?.gst_percent ?? 0),
+                    hsn_code: product.gst_slab?.hsn_code ?? null,
                     product: product
                 });
             }
@@ -423,7 +436,6 @@ export default {
         const clearCart = () => {
             cart.value = [];
             discount.value = 0;
-            taxRate.value = 0;
         };
 
         // Adjust quantity with bounds checking and stock validation
@@ -503,7 +515,9 @@ export default {
                 minute: '2-digit'
             });
             
+            const gstInPrice = !showGstInBill.value;
             let itemsHTML = '';
+            let receiptSubtotal = 0;
             saleData.items.forEach(item => {
                 const itemName = (item.product?.name || 'N/A').substring(0, 30);
                 const u = (item.product?.unit || 'pcs').toLowerCase();
@@ -511,17 +525,27 @@ export default {
                 const qtyStr = isWeight && Number(item.quantity) !== parseInt(item.quantity, 10)
                     ? parseFloat(item.quantity).toFixed(2) + ' ' + u
                     : item.quantity + ' ' + u;
+                const qty = parseFloat(item.quantity) || 1;
+                const unitDisplay = gstInPrice
+                    ? (parseFloat(item.total) || 0) / qty
+                    : parseFloat(item.unit_price) || 0;
+                const totalDisplay = parseFloat(item.total) || 0;
+                if (gstInPrice) receiptSubtotal += totalDisplay;
+                const hsnCode = item.hsn_code || item.product?.gst_slab?.hsn_code || item.product?.gstSlab?.hsn_code;
+                const showHsnOnReceipt = showGstInBill.value && hsnCode;
                 itemsHTML += `
                     <div style="margin: 6px 0; padding-bottom: 4px; border-bottom: 1px dotted #eee;">
                         <div style="font-weight: 500; margin-bottom: 2px; font-size: 11px;">${itemName}</div>
+                        ${showHsnOnReceipt ? `<div style="font-size: 10px; color: #555; margin-bottom: 2px;">HSN: ${hsnCode}</div>` : ''}
                         <div style="display: flex; justify-content: space-between; margin-left: 10px; font-size: 11px;">
                             <span>Qty: ${qtyStr}</span>
-                            <span>₹${parseFloat(item.unit_price).toFixed(2)}</span>
-                            <span>₹${parseFloat(item.total).toFixed(2)}</span>
+                            <span>₹${unitDisplay.toFixed(2)}</span>
+                            <span>₹${totalDisplay.toFixed(2)}</span>
                         </div>
                     </div>
                 `;
             });
+            if (!gstInPrice) receiptSubtotal = parseFloat(saleData.subtotal) || 0;
 
             const receiptHTML = `
                 <!DOCTYPE html>
@@ -613,16 +637,16 @@ export default {
                         <span>${date}</span>
                     </div>
                     ${saleData.customer ? `<div class="row"><span>Customer:</span><span>${saleData.customer.name}</span></div>` : ''}
-                    ${saleData.customer?.gst_number ? `<div class="row"><span>GST:</span><span>${saleData.customer.gst_number}</span></div>` : ''}
+                    ${showGstInBill.value && saleData.customer?.gst_number ? `<div class="row"><span>GST:</span><span>${saleData.customer.gst_number}</span></div>` : ''}
                     <div class="divider"></div>
                     ${itemsHTML}
                     <div class="divider"></div>
                     <div class="row">
                         <span>Subtotal:</span>
-                        <span>₹${parseFloat(saleData.subtotal).toFixed(2)}</span>
+                        <span>₹${(gstInPrice ? receiptSubtotal : parseFloat(saleData.subtotal)).toFixed(2)}</span>
                     </div>
                     ${saleData.discount > 0 ? `<div class="row"><span>Discount:</span><span>-₹${parseFloat(saleData.discount).toFixed(2)}</span></div>` : ''}
-                    ${saleData.tax_amount > 0 ? `
+                    ${showGstInBill.value && saleData.tax_amount > 0 ? `
                     <div class="row"><span>CGST (${(parseFloat(saleData.tax_rate || 0) / 2).toFixed(1)}%):</span><span>₹${(parseFloat(saleData.tax_amount) / 2).toFixed(2)}</span></div>
                     <div class="row"><span>SGST (${(parseFloat(saleData.tax_rate || 0) / 2).toFixed(1)}%):</span><span>₹${(parseFloat(saleData.tax_amount) / 2).toFixed(2)}</span></div>
                     ` : ''}
@@ -728,7 +752,8 @@ export default {
                     product_id: item.id,
                     quantity: item.quantity,
                     unit_price: parseFloat(item.price).toFixed(2),
-                    discount: 0
+                    discount: 0,
+                    gst_percent: parseFloat(item.gst_percent ?? item.product?.gst_slab?.gst_percent ?? 0).toFixed(2)
                 }));
 
                 // Validate credit limit before processing
@@ -749,7 +774,6 @@ export default {
                 const response = await axios.post('/api/pos/sale', {
                     customer_id: selectedCustomer.value?.id || null,
                     items,
-                    tax_rate: taxRate.value,
                     discount: discount.value,
                     payment_method: paymentMethod.value
                 });
@@ -802,7 +826,6 @@ export default {
             gridContainer,
             loadMoreTrigger,
             onSearchInput,
-            taxRate,
             discount,
             paymentMethod,
             selectedCustomer,
@@ -841,6 +864,7 @@ export default {
             recalculateCart,
             editingPriceIndex,
             startEditPrice,
+            showGstInBill,
         };
     }
 };
@@ -1080,6 +1104,12 @@ width: 400px;
     color: #666;
 }
 
+.item-info .item-hsn {
+    font-size: 11px;
+    color: #555;
+    margin-top: 2px;
+}
+
 .price-text {
     cursor: pointer;
 }
@@ -1141,6 +1171,24 @@ width: 400px;
     border-top: 2px solid #e0e0e0;
     padding-top: 10px;
     margin-top: 10px;
+}
+
+.summary-row.checkbox-row {
+    justify-content: flex-start;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
 }
 
 .input-small {
