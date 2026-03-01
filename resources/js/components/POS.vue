@@ -91,28 +91,26 @@
 
                                     <template v-if="posConfig.view_total_editable">
                                         <template v-if="editingPriceIndex === index">
-                                            <input
-                                                v-model.number="item.price"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                class="qty-input"
-                                                @input="onPriceInput(index, $event)"
-                                                @change="validatePrice(index); recalculateCart()"
-                                                @blur="editingPriceIndex = null"
-                                                :title="`Original: ₹${item.original_price}`"
-                                                autofocus
-                                            />
+                                           <input
+                                            v-model="item.price"
+                                            type="text"
+                                            inputmode="decimal"
+                                            class="qty-input"
+                                            @blur="validatePrice(index); recalculateCart(); editingPriceIndex = null"
+                                            :title="`Original: ₹${item.original_price}`"
+                                            autofocus
+                                        />
+
                                         </template>
                                         <template v-else>
                                             <span class="text-display price-text" @click="startEditPrice(index)">
-                                                {{ item.price.toFixed(2) }}
+                                                {{ Number(item.price || 0).toFixed(2) }}
                                             </span>
                                         </template>
                                     </template>
                                     <template v-else>
                                         <span class="text-display">
-                                            {{ item.price.toFixed(2) }}
+                                                {{ Number(item.price || 0).toFixed(2) }}
                                         </span>
                                     </template>
 
@@ -397,11 +395,15 @@ export default {
 
         const validatePrice = (index) => {
             const item = cart.value[index];
+
             let p = parseFloat(item.price);
+
             if (isNaN(p) || p < 0) {
-                item.price = parseFloat(item.original_price ?? item.product?.selling_price ?? 0);
+                item.price = parseFloat(
+                    item.original_price ?? item.product?.selling_price ?? 0
+                ).toFixed(2);
             } else {
-                item.price = parseFloat(p.toFixed(2));
+                item.price = p.toFixed(2);
             }
         };
 
@@ -413,22 +415,6 @@ export default {
             editingPriceIndex.value = index;
         };
 
-        // limit decimal places for a stringified number
-        const limitDecimals = (val, decimals) => {
-            const regex = new RegExp(`^(\\d+)(\\.\\d{0,${decimals}})?`);
-            const match = String(val).match(regex);
-            return match ? match[0] : '';
-        };
-
-        const onPriceInput = (index, event) => {
-            const raw = event.target.value;
-            const limited = limitDecimals(raw, 2);
-            event.target.value = limited;
-            const parsed = parseFloat(limited);
-            if (!isNaN(parsed)) {
-                cart.value[index].price = parsed;
-            }
-        };
 
         const removeFromCart = (index) => {
             cart.value.splice(index, 1);
@@ -855,7 +841,6 @@ export default {
             recalculateCart,
             editingPriceIndex,
             startEditPrice,
-            onPriceInput,
         };
     }
 };
