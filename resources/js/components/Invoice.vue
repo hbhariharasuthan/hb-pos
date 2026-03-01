@@ -15,7 +15,7 @@
                     <p>Phone: {{ client?.phone || '' }}</p>
                 </div>
                 <div class="invoice-info">
-                    <h2>INVOICE</h2>
+                    <h2>INVOICE sdfsdfsdf</h2>
                     <p><strong>Invoice #:</strong> {{ sale?.invoice_number }}</p>
                     <p><strong>Date:</strong> {{ formatDate(sale?.sale_date) }}</p>
                 </div>
