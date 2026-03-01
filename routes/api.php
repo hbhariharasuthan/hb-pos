@@ -47,7 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // POS
     Route::get('/pos/products', [POSController::class, 'getProducts']);
     Route::post('/pos/sale', [POSController::class, 'processSale']);
-
+    Route::get('/pos/config', [POSController::class, 'getConfig']);
     // Sales
     Route::apiResource('sales', SaleController::class);
     Route::get('/sales/{id}/invoice', [SaleController::class, 'getInvoice']);
