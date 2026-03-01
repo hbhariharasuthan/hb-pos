@@ -1080,6 +1080,10 @@ export default {
     border-radius: 8px;
 }
 
+.item-info {
+width: 400px;
+}
+
 .item-info h4 {
     margin: 0 0 4px 0;
     font-size: 14px;
@@ -1113,8 +1117,7 @@ export default {
 .qty,
 .qty-input {
     display: inline-block;
-    min-width: 30px; 
-    width: auto;
+    width: 50px; 
     padding: 7px 0px;
     text-align: center;
     border: 1px solid #ddd;
