@@ -86,7 +86,40 @@
                         <div v-for="(item, index) in cart" :key="index" class="cart-item">
                             <div class="item-info">
                                 <h4>{{ item.name }}</h4>
-                                <p>₹{{ item.price }} × {{ formatCartQty(item.quantity, item.unit) }} {{ item.unit || 'pcs' }}</p>
+                                <div class="price-row">
+                                    <span class="currency">₹</span>
+
+                                    <template v-if="posConfig.view_total_editable">
+                                        <template v-if="editingPriceIndex === index">
+                                            <input
+                                                v-model.number="item.price"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                class="qty-input"
+                                                @input="onPriceInput(index, $event)"
+                                                @change="validatePrice(index); recalculateCart()"
+                                                @blur="editingPriceIndex = null"
+                                                :title="`Original: ₹${item.original_price}`"
+                                                autofocus
+                                            />
+                                        </template>
+                                        <template v-else>
+                                            <span class="text-display price-text" @click="startEditPrice(index)">
+                                                {{ item.price.toFixed(2) }}
+                                            </span>
+                                        </template>
+                                    </template>
+                                    <template v-else>
+                                        <span class="text-display">
+                                            {{ item.price.toFixed(2) }}
+                                        </span>
+                                    </template>
+
+                                    <small class="price-mult">
+                                        × {{ formatCartQty(item.quantity, item.unit) }} {{ item.unit || 'pcs' }}
+                                    </small>
+                                </div>
                             </div>
                             <div class="item-actions">
                                 <button @click="updateQuantity(index, item.quantity - qtyStep(item.unit))" class="btn-qty">-</button>
@@ -207,14 +240,13 @@ import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
 import { useClientInfo } from '@/composables/useClientInfo.js'
 import { handleApiError } from '@/utils/errorHandler';
 
-
 export default {
     name: 'POS',
-    components: {
-        PaginatedDropdown
-    },
+    components: { PaginatedDropdown },
     setup() {
         const cart = ref([]);
+        const posConfig = ref({ view_total_editable: false });
+        const editingPriceIndex = ref(null);
         const searchQuery = ref('');
         const taxRate = ref(0);
         const discount = ref(0);
@@ -355,6 +387,7 @@ export default {
                     id: product.id,
                     name: product.name,
                     price: parseFloat(product.selling_price),
+                    original_price: parseFloat(product.selling_price),
                     quantity: startQty,
                     unit: unit,
                     product: product
@@ -362,28 +395,39 @@ export default {
             }
         };
 
-        const validateCartQty = (index) => {
+        const validatePrice = (index) => {
             const item = cart.value[index];
-            const stock = parseFloat(item.product.stock_quantity);
-            let qty = parseFloat(item.quantity);
-            if (isNaN(qty) || qty < 0) qty = qtyStep(item.unit);
-            if (qty > stock) qty = stock;
-            item.quantity = isWeightUnit(item.unit) ? parseFloat(qty.toFixed(3)) : Math.floor(qty);
+            let p = parseFloat(item.price);
+            if (isNaN(p) || p < 0) {
+                item.price = parseFloat(item.original_price ?? item.product?.selling_price ?? 0);
+            } else {
+                item.price = parseFloat(p.toFixed(2));
+            }
         };
 
-        const updateQuantity = (index, newQuantity) => {
-            const item = cart.value[index];
-            const step = qtyStep(item.unit);
-            if (newQuantity < step) {
-                removeFromCart(index);
-                return;
+        const recalculateCart = () => {
+            cart.value = cart.value.map(i => ({ ...i }));
+        };
+
+        const startEditPrice = (index) => {
+            editingPriceIndex.value = index;
+        };
+
+        // limit decimal places for a stringified number
+        const limitDecimals = (val, decimals) => {
+            const regex = new RegExp(`^(\\d+)(\\.\\d{0,${decimals}})?`);
+            const match = String(val).match(regex);
+            return match ? match[0] : '';
+        };
+
+        const onPriceInput = (index, event) => {
+            const raw = event.target.value;
+            const limited = limitDecimals(raw, 2);
+            event.target.value = limited;
+            const parsed = parseFloat(limited);
+            if (!isNaN(parsed)) {
+                cart.value[index].price = parsed;
             }
-            const stock = parseFloat(item.product.stock_quantity);
-            if (newQuantity > stock) {
-                handleApiError('Insufficient stock. Available: ' + formatQty(stock, item.unit) + ' ' + item.unit);
-                return;
-            }
-            item.quantity = isWeightUnit(item.unit) ? parseFloat(Number(newQuantity).toFixed(3)) : Math.floor(newQuantity);
         };
 
         const removeFromCart = (index) => {
@@ -394,6 +438,71 @@ export default {
             cart.value = [];
             discount.value = 0;
             taxRate.value = 0;
+        };
+
+        // Adjust quantity with bounds checking and stock validation
+        const updateQuantity = (index, newQty) => {
+            const item = cart.value[index];
+            if (!item) return;
+
+            const stock = parseFloat(item.product?.stock_quantity || 0);
+            const step = qtyStep(item.unit);
+
+            // Prevent less than minimum step
+            if (newQty < step) {
+                newQty = step;
+            }
+
+            // Prevent exceeding stock
+            if (newQty > stock) {
+                handleApiError(
+                    'Insufficient stock. Available: ' +
+                        formatQty(stock, item.unit) + ' ' + item.unit
+                );
+                return;
+            }
+
+            item.quantity = isWeightUnit(item.unit)
+                ? parseFloat(newQty.toFixed(3))
+                : Math.floor(newQty);
+        };
+
+        // Ensure manually entered quantities are valid
+        const validateCartQty = (index) => {
+            const item = cart.value[index];
+            if (!item) return;
+
+            let qty = parseFloat(item.quantity);
+            const stock = parseFloat(item.product?.stock_quantity || 0);
+            const step = qtyStep(item.unit);
+
+            if (isNaN(qty) || qty < step) {
+                qty = step;
+            }
+
+            if (qty > stock) {
+                handleApiError(
+                    'Insufficient stock. Available: ' +
+                    formatQty(stock, item.unit) + ' ' + item.unit
+                );
+                qty = stock;
+            }
+
+            item.quantity = isWeightUnit(item.unit)
+                ? parseFloat(qty.toFixed(3))
+                : Math.floor(qty);
+        };
+
+        // Retrieve POS configuration from server
+        const fetchPosConfig = async () => {
+            try {
+                const response = await axios.get('/api/pos/config');
+
+                // Adjust depending on your API structure
+                posConfig.value = response.data.config || response.data;
+            } catch (error) {
+                console.error('Error fetching POS config:', error);
+            }
         };
 
         const printThermalReceipt = (saleData) => {
@@ -623,14 +732,16 @@ export default {
 
         const processSale = async () => {
             if (cart.value.length === 0) return;
-
             processing.value = true;
 
             try {
+                if (posConfig.value.view_total_editable) {
+                    cart.value.forEach((it, i) => validatePrice(i));
+                }
                 const items = cart.value.map(item => ({
                     product_id: item.id,
                     quantity: item.quantity,
-                    unit_price: item.price,
+                    unit_price: parseFloat(item.price).toFixed(2),
                     discount: 0
                 }));
 
@@ -687,6 +798,7 @@ export default {
         onMounted(() => {
             loadInitial();
             setTimeout(() => setupScrollObserver(), 100);
+            fetchPosConfig();        // <–– fetch config on mount
         });
 
         watch([loadMoreTrigger, gridContainer], () => {
@@ -696,6 +808,7 @@ export default {
         return {
             filteredProducts,
             cart,
+            posConfig,
             searchQuery,
             loading,
             hasMore,
@@ -737,7 +850,12 @@ export default {
             printThermalReceipt,
             categoryFilter,
             brandFilter,
-            client
+            client,
+            validatePrice,
+            recalculateCart,
+            editingPriceIndex,
+            startEditPrice,
+            onPriceInput,
         };
     }
 };
@@ -973,6 +1091,10 @@ export default {
     color: #666;
 }
 
+.price-text {
+    cursor: pointer;
+}
+
 .item-actions {
     display: flex;
     align-items: center;
@@ -990,13 +1112,14 @@ export default {
 
 .qty,
 .qty-input {
-    min-width: 44px;
-    width: 50px;
+    display: inline-block;
+    min-width: 30px; 
+    width: auto;
+    padding: 7px 0px;
     text-align: center;
-    padding: 4px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .btn-remove {
