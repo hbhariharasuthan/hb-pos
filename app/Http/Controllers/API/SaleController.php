@@ -10,7 +10,7 @@ class SaleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Sale::with(['customer', 'user', 'items.product']);
+        $query = Sale::with(['customer', 'user', 'items.product.gstSlab']);
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -48,13 +48,13 @@ class SaleController extends Controller
 
     public function show($id)
     {
-        $sale = Sale::with(['customer', 'user', 'items.product'])->findOrFail($id);
+        $sale = Sale::with(['customer', 'user', 'items.product.gstSlab'])->findOrFail($id);
         return response()->json($sale);
     }
 
     public function getInvoice($id)
     {
-        $sale = Sale::with(['customer', 'user', 'items.product'])->findOrFail($id);
+        $sale = Sale::with(['customer', 'user', 'items.product.gstSlab'])->findOrFail($id);
         return response()->json($sale);
     }
 }

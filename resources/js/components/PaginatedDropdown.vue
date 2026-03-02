@@ -198,7 +198,7 @@ export default {
             return String(item);
         };
 
-        /* 🔥 ADD WATCHER HERE */
+        /* Sync display label from modelValue */
         watch(
             () => props.modelValue,
             (val) => {
@@ -219,6 +219,22 @@ export default {
                 }
             },
             { immediate: true }
+        );
+
+        // Auto-select when only one option (form dropdowns without "All" option)
+        watch(
+            () => ({ list: validItems.value, loading: loading.value }),
+            ({ list, loading: isLoading }) => {
+                if (isLoading || !list || list.length !== 1) return;
+                if (props.includeAllOption) return; // don't auto-select for filter dropdowns
+                const current = props.modelValue;
+                const hasValue = current != null && current !== '';
+                if (hasValue) return;
+                const single = list[0];
+                emit('update:modelValue', props.emitFullItem ? single : getValue(single));
+                localSearch.value = getLabel(single);
+            },
+            { deep: true }
         );
 
         // Get secondary label from item

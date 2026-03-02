@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Product extends Model
 {
     protected $fillable = [
-        'name', 'sku', 'barcode', 'category_id', 'brand_id', 'description',
+        'name', 'sku', 'barcode', 'category_id', 'brand_id', 'gst_slab_id', 'description',
         'cost_price', 'selling_price', 'stock_quantity', 'min_stock_level',
         'unit', 'image', 'is_active'
     ];
@@ -57,5 +57,10 @@ class Product extends Model
     public function isLowStock(): bool
     {
         return $this->stock_quantity <= $this->min_stock_level;
+    }
+
+    public function gstSlab(): BelongsTo
+    {
+        return $this->belongsTo(GstSlab::class, 'gst_slab_id');
     }
 }

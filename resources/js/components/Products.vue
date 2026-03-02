@@ -121,6 +121,18 @@
                         />
                     </div>
                     <div class="form-group">
+                        <label>GST / HSN Slab</label>
+                        <PaginatedDropdown
+                            v-model="form.gst_slab_id"
+                            endpoint="/api/gst-slabs"
+                            value-key="id"
+                            label-key="hsn_code"
+                            secondary-label-key="description"
+                            placeholder="Select GST Slab (HSN)"
+                            emit-full-item
+                        />
+                    </div>
+                    <div class="form-group">
                         <label>Unit</label>
                         <select v-model="form.unit">
                             <option value="pcs">pcs (pieces)</option>
@@ -194,6 +206,7 @@ export default {
             sku: '',
             category_id: '',
             brand_id: '',
+            gst_slab_id: '',
             cost_price: 0,
             selling_price: 0,
             stock_quantity: 0,
@@ -283,10 +296,12 @@ export default {
         const editProduct = (product) => {
             editingProduct.value = product;
 
+            // Use full objects when available so dropdowns display name / hsn_code (like Name and SKU)
             form.value = {
                 ...product,
-                category_id: product.category || null,
-                brand_id: product.brand || null,
+                category_id: product.category ?? product.category_id ?? null,
+                brand_id: product.brand ?? product.brand_id ?? null,
+                gst_slab_id: product.gst_slab ?? product.gstSlab ?? product.gst_slab_id ?? null,
             };
 
             showModal.value = true;
@@ -298,6 +313,7 @@ export default {
                     ...form.value,
                     category_id: toId(form.value.category_id),
                     brand_id: toId(form.value.brand_id),
+                    gst_slab_id: toId(form.value.gst_slab_id),
                 };
                 if (editingProduct.value) {
                     await axios.put(`/api/products/${editingProduct.value.id}`, payload);
@@ -342,6 +358,7 @@ export default {
                 sku: '',
                 category_id: '',
                 brand_id: '',
+                gst_slab_id: '',
                 cost_price: 0,
                 selling_price: 0,
                 stock_quantity: 0,

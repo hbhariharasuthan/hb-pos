@@ -2,16 +2,25 @@ import { reactive, readonly } from 'vue'
 
 let state = null
 
+function getClientInfoRaw() {
+  const raw = typeof window !== 'undefined' ? window.CLIENT_INFO : null
+  return raw != null && typeof raw === 'object' ? raw : {}
+}
+
+function ensureString(val) {
+  return val != null && typeof val === 'string' ? val : ''
+}
+
 export const useClientInfo = () => {
   if (!state) {
-    const clientInfo = window.CLIENT_INFO ?? {}
-
+    const clientInfo = getClientInfoRaw()
     state = reactive({
       logo: clientInfo.logo ?? null,
-      name: clientInfo.name ?? '',
-      location: clientInfo.location ?? '',
-      pin: clientInfo.pin ?? '',
-      phone: clientInfo.phone ?? '',
+      name: ensureString(clientInfo.name),
+      location: ensureString(clientInfo.location),
+      pin: ensureString(clientInfo.pin),
+      phone: ensureString(clientInfo.phone),
+      gst_number: ensureString(clientInfo.gst_number),
     })
   }
 

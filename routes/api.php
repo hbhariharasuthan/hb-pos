@@ -12,6 +12,7 @@ use App\Http\Controllers\API\ReturnController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\PurchaseController;
 use App\Http\Controllers\API\ImportController;
+use App\Http\Controllers\API\GstSlabController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -33,6 +34,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Brands
     Route::get('/brands/all', [BrandController::class, 'index'])->name('brands.all');
     Route::apiResource('brands', BrandController::class);
+
+    // GST Slabs (for product HSN / tax assignment)
+    Route::get('/gst-slabs', [GstSlabController::class, 'index']);
     //import brands
     Route::post('/import/{type}', [ImportController::class, 'import']);
 

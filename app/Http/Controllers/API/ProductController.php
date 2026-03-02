@@ -14,7 +14,7 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'brand']);
+        $query = Product::with(['category', 'brand', 'gstSlab']);
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -49,10 +49,8 @@ class ProductController extends Controller
         }
 
         $query->orderBy('name');
-        
-        // Always paginate - default to 10 items per page if not specified
-        $perPage = $request->input('per_page', 10);
-        return response()->json($query->paginate($perPage));
+
+        return $query->paginate($request->input('per_page', 10));
     }
 
     public function store(Request $request)
@@ -64,6 +62,7 @@ class ProductController extends Controller
                 'barcode' => 'nullable|string|unique:products,barcode',
                 'category_id' => 'nullable|exists:categories,id',
                 'brand_id' => 'nullable|exists:brands,id',
+                'gst_slab_id' => 'nullable|exists:gst_slabs,id',
                 'description' => 'nullable|string',
                 'cost_price' => 'required|numeric|min:0',
                 'selling_price' => 'required|numeric|min:0',
@@ -75,7 +74,7 @@ class ProductController extends Controller
 
             $product = Product::create($validated);
 
-            return response()->json($product->load(['category', 'brand']), 201);
+            return response()->json($product->load(['category', 'brand', 'gstSlab']), 201);
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'Validation failed',
@@ -86,7 +85,7 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        $product = Product::with(['category', 'brand'])->findOrFail($id);
+        $product = Product::with(['category', 'brand', 'gstSlab'])->findOrFail($id);
         return response()->json($product);
     }
 
@@ -101,6 +100,7 @@ class ProductController extends Controller
                 'barcode' => 'nullable|string|unique:products,barcode,' . $id,
                 'category_id' => 'nullable|exists:categories,id',
                 'brand_id' => 'nullable|exists:brands,id',
+                'gst_slab_id' => 'nullable|exists:gst_slabs,id',
                 'description' => 'nullable|string',
                 'cost_price' => 'sometimes|required|numeric|min:0',
                 'selling_price' => 'sometimes|required|numeric|min:0',
@@ -112,7 +112,7 @@ class ProductController extends Controller
 
             $product->update($validated);
 
-            return response()->json($product->load(['category', 'brand']));
+            return response()->json($product->load(['category', 'brand', 'gstSlab']));
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'Validation failed',

@@ -15,7 +15,7 @@
                     <p>Phone: {{ client?.phone || '' }}</p>
                 </div>
                 <div class="invoice-info">
-                    <h2>INVOICE sdfsdfsdf</h2>
+                    <h2>INVOICE</h2>
                     <p><strong>Invoice #:</strong> {{ sale?.invoice_number }}</p>
                     <p><strong>Date:</strong> {{ formatDate(sale?.sale_date) }}</p>
                 </div>
@@ -35,8 +35,10 @@
                     <thead>
                         <tr>
                             <th>Item</th>
+                            <th>HSN</th>
                             <th>Quantity</th>
                             <th>Unit Price</th>
+                            <th>GST %</th>
                             <th>Discount</th>
                             <th>Tax</th>
                             <th>Total</th>
@@ -45,8 +47,10 @@
                     <tbody>
                         <tr v-for="item in (sale?.items || []).filter(i => i != null && i.id != null)" :key="item.id">
                             <td>{{ item.product?.name }}</td>
+                            <td>{{ item.product?.gst_slab?.hsn_code || '—' }}</td>
                             <td>{{ formatItemQty(item.quantity, item.product?.unit) }} {{ item.product?.unit || 'pcs' }}</td>
                             <td>₹{{ item.unit_price }}</td>
+                            <td>{{ item.tax_rate ?? item.product?.gst_slab?.gst_percent ?? 0 }}%</td>
                             <td>₹{{ item.discount }}</td>
                             <td>₹{{ item.tax_amount }}</td>
                             <td>₹{{ item.total }}</td>
@@ -202,6 +206,7 @@ export default {
                 <body>
                     <div class="header">
                         <div class="company-name">${ client.name }</div>
+                        <div class="company-name">${ client.gst_number }</div>
                         <div class="company-name">${ client.location }</div>
                         <div style="font-size: 11px;">${ client?.phone}</div>
                     </div>
