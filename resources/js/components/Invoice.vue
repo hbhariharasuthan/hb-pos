@@ -206,6 +206,7 @@ export default {
                 <body>
                     <div class="header">
                         <div class="company-name">${ client.name }</div>
+                        <div class="company-name">${ client.gst_number }</div>
                         <div class="company-name">${ client.location }</div>
                         <div style="font-size: 11px;">${ client?.phone}</div>
                     </div>

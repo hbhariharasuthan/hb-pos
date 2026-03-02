@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name', 'Laravel') }}</title>
     <script>
-        window.CLIENT_INFO = @json(config('client'));
-   </script>
+        window.CLIENT_INFO = @json(config('client') ?? []);
+    </script>
     @vite(['resources/js/app.js'])
 </head>
 <body>
