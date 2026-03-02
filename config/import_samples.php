@@ -111,4 +111,13 @@ return [
         ],
     ],
 
+    'gst_slabs' => [
+        'headers' => ['hsn_code', 'gst_percent', 'description'],
+        'rows' => [
+            ['998314', 18, 'IT services and software'],
+            ['998315', 12, 'Support services'],
+            ['998316', 5, 'Other support services'],
+        ],
+    ],
+
 ];

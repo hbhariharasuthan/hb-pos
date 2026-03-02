@@ -73,10 +73,11 @@ class GstSlabController extends Controller
     {
         $slab = GstSlab::findOrFail($id);
 
+        // Block delete if any product uses this GST slab (same idea as brand/category)
         $productsCount = $slab->products()->count();
         if ($productsCount > 0) {
             throw ValidationException::withMessages([
-                'gst_slab_id' => "This GST slab is used by {$productsCount} product(s). Remove or change the slab from those products first.",
+                'gst_slab_id' => 'This GST slab is mapped to ' . $productsCount . ' product(s). Remove or change the slab from those products first.',
             ]);
         }
 

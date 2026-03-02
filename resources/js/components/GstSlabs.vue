@@ -4,6 +4,7 @@
             <h1>GST Slabs (HSN) Management</h1>
             <div class="action-bar">
                 <button @click="showModal = true" class="btn btn-primary">Add GST Slab</button>
+                <button class="btn outline" @click="showImport = true">Import GST Slabs</button>
             </div>
         </div>
 
@@ -66,6 +67,12 @@
                 </form>
             </div>
         </div>
+
+        <ImportModal
+            :show="showImport"
+            type="gst_slabs"
+            @close="showImport = false"
+        />
     </div>
 </template>
 
@@ -74,14 +81,17 @@ import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
 import { usePaginatedDropdown } from '../composables/usePaginatedDropdown.js';
+import ImportModal from './ImportModal.vue';
 import { handleApiError } from '@/utils/errorHandler';
 
 export default {
     name: 'GstSlabs',
+    components: { ImportModal },
     setup() {
         const toast = useToast();
         const search = ref('');
         const showModal = ref(false);
+        const showImport = ref(false);
         const editingSlab = ref(null);
         const form = ref({
             hsn_code: '',
@@ -195,6 +205,7 @@ export default {
             editSlab,
             saveSlab,
             deleteSlab,
+            showImport,
         };
     },
 };
