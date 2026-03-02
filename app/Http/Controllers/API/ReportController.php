@@ -25,7 +25,7 @@ class ReportController extends Controller
         }
 
         if ($request->has('date_from') || $request->has('date_to')) {
-            $query->whereHas('stockMovements', function($q) use ($request) {
+            $query->whereHas('stockMovements', function ($q) use ($request) {
                 if ($request->has('date_from')) {
                     $q->whereDate('created_at', '>=', $request->date_from);
                 }
@@ -35,25 +35,24 @@ class ReportController extends Controller
             });
         }
 
-        $products = $query->get();
-
+        $statsQuery = clone $query;
         $stats = [
-            'total_products' => $products->count(),
-            'total_value' => $products->sum(function($p) {
-                return $p->stock_quantity * $p->cost_price;
-            }),
-            'low_stock_count' => $products->filter(function($p) {
-                return $p->stock_quantity <= $p->min_stock_level;
-            })->count(),
-            'out_of_stock_count' => $products->filter(function($p) {
-                return $p->stock_quantity === 0;
-            })->count(),
-            'total_stock_quantity' => $products->sum('stock_quantity'),
+            'total_products' => $statsQuery->count(),
+            'total_value' => (float) $statsQuery->get()->sum(fn ($p) => $p->stock_quantity * $p->cost_price),
+            'low_stock_count' => (clone $statsQuery)->whereRaw('stock_quantity <= min_stock_level')->count(),
+            'out_of_stock_count' => (clone $statsQuery)->where('stock_quantity', 0)->count(),
+            'total_stock_quantity' => $statsQuery->sum('stock_quantity'),
         ];
+
+        $perPage = (int) $request->input('per_page', 15);
+        $paginated = $query->orderBy('name')->paginate($perPage);
 
         return response()->json([
             'stats' => $stats,
-            'products' => $products,
+            'products' => $paginated->items(),
+            'current_page' => $paginated->currentPage(),
+            'last_page' => $paginated->lastPage(),
+            'total' => $paginated->total(),
         ]);
     }
 
@@ -77,37 +76,25 @@ class ReportController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $movements = $query->orderBy('created_at', 'desc')->get();
-
+        $baseQuery = clone $query;
         $stats = [
-            'total_movements' => $movements->count(),
-            'purchases' => $movements->where('type', 'purchase')->sum('quantity'),
-            'sales' => abs($movements->where('type', 'sale')->sum('quantity')),
-            'returns' => $movements->where('type', 'return')->sum('quantity'),
-            'adjustments' => $movements->where('type', 'adjustment')->sum('quantity'),
-            'total_value' => $movements->where('type', 'purchase')->sum(function($m) {
-                return $m->quantity * ($m->unit_cost ?? 0);
-            }),
+            'total_movements' => $baseQuery->count(),
+            'purchases' => (clone $baseQuery)->where('type', 'purchase')->sum('quantity'),
+            'sales' => abs((clone $baseQuery)->where('type', 'sale')->sum('quantity')),
+            'returns' => (clone $baseQuery)->where('type', 'return')->sum('quantity'),
+            'adjustments' => (clone $baseQuery)->where('type', 'adjustment')->sum('quantity'),
+            'total_value' => (float) (clone $baseQuery)->where('type', 'purchase')->get()->sum(fn ($m) => $m->quantity * ($m->unit_cost ?? 0)),
         ];
 
-        // Group by product
-        $productMovements = $movements->groupBy('product_id')->map(function($group) {
-            $product = $group->first()->product;
-            return [
-                'product_id' => $product->id,
-                'product_name' => $product->name,
-                'sku' => $product->sku,
-                'movements' => $group->count(),
-                'total_in' => $group->whereIn('type', ['purchase', 'return'])->sum('quantity'),
-                'total_out' => abs($group->whereIn('type', ['sale'])->sum('quantity')),
-                'adjustments' => $group->where('type', 'adjustment')->sum('quantity'),
-            ];
-        })->values();
+        $perPage = (int) $request->input('per_page', 15);
+        $paginated = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         return response()->json([
             'stats' => $stats,
-            'movements' => $movements,
-            'product_summary' => $productMovements,
+            'movements' => $paginated->items(),
+            'current_page' => $paginated->currentPage(),
+            'last_page' => $paginated->lastPage(),
+            'total' => $paginated->total(),
         ]);
     }
 
@@ -131,48 +118,38 @@ class ReportController extends Controller
             $query->where('payment_method', $request->payment_method);
         }
 
-        $sales = $query->orderBy('sale_date', 'desc')->get();
-
+        $baseQuery = clone $query;
+        $totalSales = $baseQuery->count();
+        $totalRevenue = (float) (clone $baseQuery)->sum('total');
+        $totalItemsSold = (int) (clone $baseQuery)->join('sale_items', 'sales.id', '=', 'sale_items.sale_id')->sum('sale_items.quantity');
         $stats = [
-            'total_sales' => $sales->count(),
-            'total_revenue' => $sales->sum('total'),
-            'total_items_sold' => $sales->sum(function($sale) {
-                return $sale->items->sum('quantity');
-            }),
-            'average_sale' => $sales->count() > 0 ? $sales->sum('total') / $sales->count() : 0,
-            'cash_sales' => $sales->where('payment_method', 'cash')->sum('total'),
-            'card_sales' => $sales->where('payment_method', 'card')->sum('total'),
-            'credit_sales' => $sales->where('payment_method', 'credit')->sum('total'),
-            'total_tax' => $sales->sum('tax_amount'),
-            'total_cgst' => $sales->sum('tax_amount') / 2,
-            'total_sgst' => $sales->sum('tax_amount') / 2,
-            'total_discount' => $sales->sum('discount'),
+            'total_sales' => $totalSales,
+            'total_revenue' => $totalRevenue,
+            'total_items_sold' => $totalItemsSold,
+            'average_sale' => $totalSales > 0 ? $totalRevenue / $totalSales : 0,
+            'cash_sales' => (float) (clone $baseQuery)->where('payment_method', 'cash')->sum('total'),
+            'card_sales' => (float) (clone $baseQuery)->where('payment_method', 'card')->sum('total'),
+            'credit_sales' => (float) (clone $baseQuery)->where('payment_method', 'credit')->sum('total'),
+            'total_tax' => (float) (clone $baseQuery)->sum('tax_amount'),
+            'total_cgst' => (float) (clone $baseQuery)->sum('tax_amount') / 2,
+            'total_sgst' => (float) (clone $baseQuery)->sum('tax_amount') / 2,
+            'total_discount' => (float) (clone $baseQuery)->sum('discount'),
         ];
 
-        // Daily sales breakdown
-        $dailySales = $sales->groupBy(function($sale) {
-            return $sale->sale_date->format('Y-m-d');
-        })->map(function($daySales, $date) {
-            return [
-                'date' => $date,
-                'count' => $daySales->count(),
-                'revenue' => $daySales->sum('total'),
-                'items' => $daySales->sum(function($sale) {
-                    return $sale->items->sum('quantity');
-                }),
-            ];
-        })->values();
+        $perPage = (int) $request->input('per_page', 15);
+        $paginated = $query->orderBy('sale_date', 'desc')->paginate($perPage);
+        $sales = $paginated->items();
 
-        // Top selling products
+        $dailySales = collect([]);
         $productSales = [];
         foreach ($sales as $sale) {
-            foreach ($sale->items as $item) {
+            foreach ($sale->items ?? [] as $item) {
                 $productId = $item->product_id;
-                if (!isset($productSales[$productId])) {
+                if (! isset($productSales[$productId])) {
                     $productSales[$productId] = [
                         'product_id' => $productId,
-                        'product_name' => $item->product->name,
-                        'sku' => $item->product->sku,
+                        'product_name' => $item->product->name ?? 'N/A',
+                        'sku' => $item->product->sku ?? '',
                         'brand_name' => optional($item->product->brand)->name,
                         'quantity' => 0,
                         'revenue' => 0,
@@ -189,6 +166,9 @@ class ReportController extends Controller
             'sales' => $sales,
             'daily_sales' => $dailySales,
             'top_products' => $topProducts,
+            'current_page' => $paginated->currentPage(),
+            'last_page' => $paginated->lastPage(),
+            'total' => $paginated->total(),
         ]);
     }
 
@@ -204,21 +184,24 @@ class ReportController extends Controller
             $query->whereDate('purchase_date', '<=', $request->date_to);
         }
 
-        $purchases = $query->orderBy('purchase_date', 'desc')->get();
-
+        $baseQuery = clone $query;
         $stats = [
-            'total_purchases' => $purchases->count(),
-            'total_amount' => (float) $purchases->sum('total'),
-            'total_items' => $purchases->sum(function ($p) {
-                return $p->items->sum('quantity');
-            }),
-            'total_tax' => (float) $purchases->sum('tax_amount'),
-            'total_subtotal' => (float) $purchases->sum('subtotal'),
+            'total_purchases' => $baseQuery->count(),
+            'total_amount' => (float) $baseQuery->sum('total'),
+            'total_items' => (int) (clone $baseQuery)->join('purchase_items', 'purchases.id', '=', 'purchase_items.purchase_id')->sum('purchase_items.quantity'),
+            'total_tax' => (float) $baseQuery->sum('tax_amount'),
+            'total_subtotal' => (float) $baseQuery->sum('subtotal'),
         ];
+
+        $perPage = (int) $request->input('per_page', 15);
+        $paginated = $query->orderBy('purchase_date', 'desc')->paginate($perPage);
 
         return response()->json([
             'stats' => $stats,
-            'purchases' => $purchases,
+            'purchases' => $paginated->items(),
+            'current_page' => $paginated->currentPage(),
+            'last_page' => $paginated->lastPage(),
+            'total' => $paginated->total(),
         ]);
     }
 

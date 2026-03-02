@@ -87,7 +87,7 @@
                 </div>
             </div>
 
-            <div class="table-container">
+            <div ref="reportScrollContainer" class="table-container report-scroll" @scroll="handleReportScroll">
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -118,6 +118,11 @@
                         </tr>
                     </tbody>
                 </table>
+                <div v-if="reportHasMore && reportType === 'products'" class="load-more-trigger">
+                    <div v-if="reportLoading" class="loading-indicator">Loading more...</div>
+                    <div v-else class="load-more-hint">Scroll for more</div>
+                </div>
+                <div v-if="!reportHasMore && filteredProductRows.length > 0 && reportType === 'products'" class="no-more-indicator">No more records</div>
             </div>
         </div>
 
@@ -142,7 +147,7 @@
                 </div>
             </div>
 
-            <div class="table-container">
+            <div ref="reportScrollContainer" class="table-container report-scroll" @scroll="handleReportScroll">
                 <h3>Stock Movements</h3>
                 <table class="data-table">
                     <thead>
@@ -172,6 +177,11 @@
                         </tr>
                     </tbody>
                 </table>
+                <div v-if="reportHasMore && reportType === 'inventory'" class="load-more-trigger">
+                    <div v-if="reportLoading" class="loading-indicator">Loading more...</div>
+                    <div v-else class="load-more-hint">Scroll for more</div>
+                </div>
+                <div v-if="!reportHasMore && filteredInventoryMovements.length > 0 && reportType === 'inventory'" class="no-more-indicator">No more records</div>
             </div>
         </div>
 
@@ -212,7 +222,7 @@
                 </div>
             </div>
 
-            <div class="table-container">
+            <div ref="reportScrollContainer" class="table-container report-scroll" @scroll="handleReportScroll">
                 <h3>Sales Transactions</h3>
                 <table class="data-table">
                     <thead>
@@ -244,6 +254,11 @@
                         </tr>
                     </tbody>
                 </table>
+                <div v-if="reportHasMore && reportType === 'sales'" class="load-more-trigger">
+                    <div v-if="reportLoading" class="loading-indicator">Loading more...</div>
+                    <div v-else class="load-more-hint">Scroll for more</div>
+                </div>
+                <div v-if="!reportHasMore && filteredSalesRows.length > 0 && reportType === 'sales'" class="no-more-indicator">No more records</div>
             </div>
 
             <div v-if="salesReport.top_products && salesReport.top_products.length > 0" class="table-container">
@@ -292,7 +307,7 @@
                 </div>
             </div>
 
-            <div class="table-container">
+            <div ref="reportScrollContainer" class="table-container report-scroll" @scroll="handleReportScroll">
                 <h3>Purchase Bills</h3>
                 <table class="data-table">
                     <thead>
@@ -318,6 +333,11 @@
                         </tr>
                     </tbody>
                 </table>
+                <div v-if="reportHasMore && reportType === 'purchases'" class="load-more-trigger">
+                    <div v-if="reportLoading" class="loading-indicator">Loading more...</div>
+                    <div v-else class="load-more-hint">Scroll for more</div>
+                </div>
+                <div v-if="!reportHasMore && filteredPurchaseRows.length > 0 && reportType === 'purchases'" class="no-more-indicator">No more records</div>
             </div>
         </div>
     </div>
@@ -338,46 +358,105 @@ export default {
         const salesReport = ref(null);
         const purchaseReport = ref(null);
         const reportSearch = ref('');
-        
+        const reportLoading = ref(false);
+        const reportPage = ref(1);
+        const reportLastPage = ref(1);
+        const reportScrollContainer = ref(null);
+
         const filters = ref({
             date_from: '',
             date_to: ''
         });
+
+        const reportHasMore = computed(() => reportPage.value < reportLastPage.value);
+
+        const buildReportParams = (page = 1) => {
+            const params = { page, per_page: 15 };
+            if (filters.value.date_from) params.date_from = filters.value.date_from;
+            if (filters.value.date_to) params.date_to = filters.value.date_to;
+            return params;
+        };
 
         const loadReport = async () => {
             try {
                 if (reportType.value === 'dashboard') {
                     const response = await axios.get('/api/reports/dashboard-stats');
                     dashboardStats.value = response.data;
-                } else if (reportType.value === 'products') {
-                    const params = {};
-                    if (filters.value.date_from) params.date_from = filters.value.date_from;
-                    if (filters.value.date_to) params.date_to = filters.value.date_to;
+                    return;
+                }
+                reportPage.value = 1;
+                const params = buildReportParams(1);
+                if (reportType.value === 'products') {
                     const response = await axios.get('/api/reports/products', { params });
-                    productReport.value = response.data;
+                    const d = response.data;
+                    productReport.value = { stats: d.stats, products: d.products || [] };
+                    reportLastPage.value = d.last_page ?? 1;
                 } else if (reportType.value === 'inventory') {
-                    const params = {};
-                    if (filters.value.date_from) params.date_from = filters.value.date_from;
-                    if (filters.value.date_to) params.date_to = filters.value.date_to;
                     const response = await axios.get('/api/reports/inventory', { params });
-                    inventoryReport.value = response.data;
+                    const d = response.data;
+                    inventoryReport.value = { stats: d.stats, movements: d.movements || [] };
+                    reportLastPage.value = d.last_page ?? 1;
                 } else if (reportType.value === 'sales') {
-                    const params = {};
-                    if (filters.value.date_from) params.date_from = filters.value.date_from;
-                    if (filters.value.date_to) params.date_to = filters.value.date_to;
                     const response = await axios.get('/api/reports/sales', { params });
-                    salesReport.value = response.data;
+                    const d = response.data;
+                    salesReport.value = { stats: d.stats, sales: d.sales || [], top_products: d.top_products || [], daily_sales: d.daily_sales || [] };
+                    reportLastPage.value = d.last_page ?? 1;
                 } else if (reportType.value === 'purchases') {
-                    const params = {};
-                    if (filters.value.date_from) params.date_from = filters.value.date_from;
-                    if (filters.value.date_to) params.date_to = filters.value.date_to;
                     const response = await axios.get('/api/reports/purchases', { params });
-                    purchaseReport.value = response.data;
+                    const d = response.data;
+                    purchaseReport.value = { stats: d.stats, purchases: d.purchases || [] };
+                    reportLastPage.value = d.last_page ?? 1;
                 }
             } catch (error) {
                 console.error('Error loading report:', error);
                 handleApiError('Error loading report');
             }
+        };
+
+        const loadMoreReport = async () => {
+            if (reportLoading.value || !reportHasMore.value) return;
+            const nextPage = reportPage.value + 1;
+            reportLoading.value = true;
+            try {
+                const params = buildReportParams(nextPage);
+                if (reportType.value === 'products') {
+                    const response = await axios.get('/api/reports/products', { params });
+                    const d = response.data;
+                    if (productReport.value && d.products?.length) {
+                        productReport.value.products = [...(productReport.value.products || []), ...d.products];
+                    }
+                } else if (reportType.value === 'inventory') {
+                    const response = await axios.get('/api/reports/inventory', { params });
+                    const d = response.data;
+                    if (inventoryReport.value && d.movements?.length) {
+                        inventoryReport.value.movements = [...(inventoryReport.value.movements || []), ...d.movements];
+                    }
+                } else if (reportType.value === 'sales') {
+                    const response = await axios.get('/api/reports/sales', { params });
+                    const d = response.data;
+                    if (salesReport.value && d.sales?.length) {
+                        salesReport.value.sales = [...(salesReport.value.sales || []), ...d.sales];
+                    }
+                } else if (reportType.value === 'purchases') {
+                    const response = await axios.get('/api/reports/purchases', { params });
+                    const d = response.data;
+                    if (purchaseReport.value && d.purchases?.length) {
+                        purchaseReport.value.purchases = [...(purchaseReport.value.purchases || []), ...d.purchases];
+                    }
+                }
+                reportPage.value = nextPage;
+            } catch (error) {
+                console.error('Error loading more:', error);
+            } finally {
+                reportLoading.value = false;
+            }
+        };
+
+        const handleReportScroll = (e) => {
+            const el = e.target;
+            if (!el || reportLoading.value || !reportHasMore.value) return;
+            const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+            if (scrollBottom < 100) loadMoreReport();
         };
 
         const exportReport = () => {
@@ -540,7 +619,12 @@ export default {
             purchaseReport,
             filters,
             reportSearch,
+            reportLoading,
+            reportHasMore,
+            reportScrollContainer,
             loadReport,
+            loadMoreReport,
+            handleReportScroll,
             exportReport,
             reportCgst,
             reportSgst,
@@ -689,6 +773,35 @@ export default {
     padding: 20px;
     margin-bottom: 20px;
     overflow-x: auto;
+}
+
+.report-scroll {
+    max-height: calc(100vh - 320px);
+    overflow-y: auto;
+}
+
+.load-more-trigger {
+    min-height: 50px;
+    padding: 15px;
+    text-align: center;
+}
+
+.report-scroll .loading-indicator,
+.report-scroll .load-more-hint,
+.report-scroll .no-more-indicator {
+    padding: 12px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+
+.report-scroll .loading-indicator {
+    color: #667eea;
+}
+
+.report-scroll .load-more-hint {
+    color: #999;
+    font-size: 12px;
 }
 
 .table-container h3 {
