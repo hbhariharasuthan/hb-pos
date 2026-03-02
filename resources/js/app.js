@@ -9,6 +9,7 @@ import POS from './components/POS.vue';
 import Products from './components/Products.vue';
 import Categories from './components/Categories.vue';
 import Brands from './components/Brands.vue';
+import GstSlabs from './components/GstSlabs.vue';
 import Customers from './components/Customers.vue';
 import Sales from './components/Sales.vue';
 import Invoice from './components/Invoice.vue';
@@ -29,6 +30,7 @@ const routes = [
     { path: '/products', component: Products, meta: { requiresAuth: true } },
     { path: '/categories', component: Categories, meta: { requiresAuth: true } },
     { path: '/brands', component: Brands, meta: { requiresAuth: true } },
+    { path: '/gst-slabs', component: GstSlabs, meta: { requiresAuth: true } },
     { path: '/customers', component: Customers, meta: { requiresAuth: true } },
     { path: '/sales', component: Sales, meta: { requiresAuth: true } },
     { path: '/sales/:id/invoice', component: Invoice, meta: { requiresAuth: true } },

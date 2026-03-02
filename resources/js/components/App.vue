@@ -9,11 +9,24 @@
                 <router-link to="/dashboard">Dashboard</router-link>
                 <router-link to="/pos">POS</router-link>
                 <router-link to="/products">Products</router-link>
-                <router-link to="/categories">Categories</router-link>
-                <router-link to="/brands">Brands</router-link>
+                <div class="nav-dropdown" ref="mastersDropdownRef">
+                    <button
+                        type="button"
+                        class="nav-dropdown-trigger"
+                        :class="{ open: mastersOpen }"
+                        @click="mastersOpen = !mastersOpen"
+                    >
+                        Masters <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div v-if="mastersOpen" class="nav-dropdown-menu" @click.stop>
+                        <router-link to="/categories" @click="mastersOpen = false">Categories</router-link>
+                        <router-link to="/brands" @click="mastersOpen = false">Brands</router-link>
+                        <router-link to="/gst-slabs" @click="mastersOpen = false">GST Slabs</router-link>
+                        <router-link to="/customers" @click="mastersOpen = false">Customers</router-link>
+                    </div>
+                </div>
                 <router-link to="/inventory">Inventory</router-link>
                 <router-link to="/purchases">Purchases</router-link>
-                <router-link to="/customers">Customers</router-link>
                 <router-link to="/sales">Sales</router-link>
                 <router-link to="/reports">Reports</router-link>
             </div>
@@ -27,7 +40,7 @@
 </template>
 
 <script>
-import { computed } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useClientInfo } from '@/composables/useClientInfo.js'
 
@@ -37,11 +50,28 @@ export default {
         const authStore = useAuthStore();
         const currentYear = new Date().getFullYear();
         const client = useClientInfo();
+        const mastersOpen = ref(false);
+        const mastersDropdownRef = ref(null);
+
+        const closeMastersOnClickOutside = (e) => {
+            if (mastersDropdownRef.value && !mastersDropdownRef.value.contains(e.target)) {
+                mastersOpen.value = false;
+            }
+        };
+
+        onMounted(() => {
+            document.addEventListener('click', closeMastersOnClickOutside);
+        });
+        onUnmounted(() => {
+            document.removeEventListener('click', closeMastersOnClickOutside);
+        });
 
         return {
             isAuthenticated: computed(() => authStore.isAuthenticated),
             currentYear,
-            client
+            client,
+            mastersOpen,
+            mastersDropdownRef,
         };
     },
     async mounted() {
@@ -130,6 +160,63 @@ body {
 .nav-links a.router-link-active {
     background: #667eea;
     color: white;
+}
+
+.nav-dropdown {
+    position: relative;
+}
+
+.nav-dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #333;
+    font-weight: 500;
+    font-size: inherit;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.nav-dropdown-trigger:hover,
+.nav-dropdown-trigger.open {
+    background: #667eea;
+    color: white;
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    opacity: 0.9;
+}
+
+.nav-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    min-width: 160px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    padding: 8px 0;
+    z-index: 1000;
+}
+
+.nav-dropdown-menu a {
+    display: block;
+    padding: 10px 16px;
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    border-radius: 0;
+}
+
+.nav-dropdown-menu a:hover {
+    background: #f0f0ff;
+    color: #667eea;
 }
 
 .app-footer {

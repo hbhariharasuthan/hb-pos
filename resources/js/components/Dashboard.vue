@@ -63,6 +63,18 @@
                 <p>Manage categories</p>
             </router-link>
 
+            <router-link to="/brands" class="dashboard-card">
+                <div class="card-icon">🏢</div>
+                <h2>Brands</h2>
+                <p>Manage brands</p>
+            </router-link>
+
+            <router-link to="/gst-slabs" class="dashboard-card">
+                <div class="card-icon">🧾</div>
+                <h2>GST Slabs</h2>
+                <p>Manage HSN / GST rates</p>
+            </router-link>
+
             <router-link to="/customers" class="dashboard-card">
                 <div class="card-icon">👥</div>
                 <h2>Customers</h2>
@@ -79,6 +91,12 @@
                 <div class="card-icon">📋</div>
                 <h2>Inventory</h2>
                 <p>Manage stock & movements</p>
+            </router-link>
+
+            <router-link to="/purchases" class="dashboard-card">
+                <div class="card-icon">🛒</div>
+                <h2>Purchases</h2>
+                <p>Purchase orders & bills</p>
             </router-link>
 
             <router-link to="/reports" class="dashboard-card">
@@ -150,7 +168,7 @@ export default {
         onMounted(() => {
             loadStats();
         });
-        
+
         return {
             stats,
             handleLogout,
@@ -257,6 +275,7 @@ export default {
     transform: translateY(-3px);
     box-shadow: 0 6px 12px rgba(102, 126, 234, 0.25);
 }
+
 
 .card-icon {
     font-size: 36px;

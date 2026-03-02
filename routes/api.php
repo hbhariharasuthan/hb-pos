@@ -35,8 +35,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/brands/all', [BrandController::class, 'index'])->name('brands.all');
     Route::apiResource('brands', BrandController::class);
 
-    // GST Slabs (for product HSN / tax assignment)
-    Route::get('/gst-slabs', [GstSlabController::class, 'index']);
+    // GST Slabs (master + dropdown)
+    Route::get('/gst-slabs/all', [GstSlabController::class, 'index'])->name('gst-slabs.all');
+    Route::apiResource('gst-slabs', GstSlabController::class);
     //import brands
     Route::post('/import/{type}', [ImportController::class, 'import']);
 
