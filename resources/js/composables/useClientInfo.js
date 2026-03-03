@@ -1,28 +1,43 @@
 import { reactive, readonly } from 'vue'
+import axios from 'axios'
 
-let state = null
+const state = reactive({
+  logo: null,
+  name: '',
+  location: '',
+  pin: '',
+  phone: '',
+  gst_number: '',
+  loaded: false
+})
 
-function getClientInfoRaw() {
-  const raw = typeof window !== 'undefined' ? window.CLIENT_INFO : null
-  return raw != null && typeof raw === 'object' ? raw : {}
-}
+let loadingPromise = null
 
-function ensureString(val) {
-  return val != null && typeof val === 'string' ? val : ''
+function ensureLoaded() {
+  if (!loadingPromise) {
+    loadingPromise = axios
+      .get('/client-info')
+      .then(({ data }) => {
+        state.logo = data.logo ?? null
+        state.name = data.name ?? ''
+        state.location = data.location ?? ''
+        state.pin = data.pin ?? ''
+        state.phone = data.phone ?? ''
+        state.gst_number = data.gst_number ?? ''
+        state.loaded = true
+      })
+      .catch((error) => {
+        console.error('Failed to load client info:', error)
+      })
+  }
+  return loadingPromise
 }
 
 export const useClientInfo = () => {
-  if (!state) {
-    const clientInfo = getClientInfoRaw()
-    state = reactive({
-      logo: clientInfo.logo ?? null,
-      name: ensureString(clientInfo.name),
-      location: ensureString(clientInfo.location),
-      pin: ensureString(clientInfo.pin),
-      phone: ensureString(clientInfo.phone),
-      gst_number: ensureString(clientInfo.gst_number),
-    })
-  }
-
+  // Kick off load on first use; components can just read `client`
+  ensureLoaded()
   return readonly(state)
 }
+
+// Optional explicit loader if a component wants to await it
+export const loadClientInfo = () => ensureLoaded()

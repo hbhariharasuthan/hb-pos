@@ -170,7 +170,51 @@ A comprehensive Point of Sale (POS) and Inventory Management System built with L
 - `POST /api/returns` - Create a return
 - `GET /api/returns/{id}` - Get return details
 
+### Expense categories
+- `GET /api/expense-categories/all` - List all expense categories (for dropdowns)
+- `GET /api/expense-categories` - Paginated list with search and is_active filter
+- `POST /api/expense-categories` - Create category
+- `GET /api/expense-categories/{id}` - Get category
+- `PUT /api/expense-categories/{id}` - Update category
+- `DELETE /api/expense-categories/{id}` - Delete category
+
+### Expenses
+- `GET /api/expenses` - List expenses (optional: date_from, date_to, expense_category_id, status, search, per_page)
+- `POST /api/expenses` - Create expense
+- `GET /api/expenses/{id}` - Get expense
+- `PUT /api/expenses/{id}` - Update expense
+- `DELETE /api/expenses/{id}` - Delete expense
+
+### Day book entries (Phase 2)
+- `GET /api/day-book-entries` - List all day book entries (optional: date_from, date_to, entry_type, search, per_page). Includes system-generated (sale, purchase, return, expense) and manual (journal, opening_balance, payment, receipt).
+- `POST /api/day-book-entries` - Create manual entry. Body: `entry_type` (payment, receipt, journal, opening_balance), `entry_date`, `amount`, optional `voucher_number`, `narration`. Voucher number auto-generated if omitted (JV-, OB-, PAY-, RCP- prefix by type).
+- `GET /api/day-book-entries/{id}` - Get entry (with user and reference when present).
+- `PUT /api/day-book-entries/{id}` - Update manual entry only (not system-generated).
+- `DELETE /api/day-book-entries/{id}` - Delete manual entry only.
+- `POST /api/day-book-entries/{id}/reconcile` - Toggle reconciled_at (bank reconciliation).
+
+### Chart of accounts (Phase 3)
+- `GET /api/accounts` - List accounts (optional: type, is_active, search, per_page)
+- `POST /api/accounts` - Create account (code, name, type: asset|liability|equity|income|expense, parent_id, opening_balance)
+- `GET /api/accounts/{id}` - Get account
+- `PUT /api/accounts/{id}` - Update account
+- `DELETE /api/accounts/{id}` - Delete account (only if no journal lines)
+
+### Reports
+- `GET /api/reports/day-book` - Day Book report (chronological sales, purchases, returns, expenses). Query params: date_from, date_to, page, per_page
+- `GET /api/reports/day-book/export` - Day Book export (CSV or Excel). Query params: format=csv|xlsx, date_from, date_to. Streams in chunks to support large records.
+- `GET /api/reports/ledger` - Ledger by account (Phase 3). Query params: account_id (required), date_from, date_to, page, per_page
+- `GET /api/reports/trial-balance` - Trial balance (Phase 3). Query params: date_from, date_to
+- `GET /api/reports/profit-loss` - Profit & Loss (Phase 3). Query params: date_from, date_to
+- `GET /api/reports/balance-sheet` - Balance sheet as on date (Phase 3). Query params: date_to or as_on_date
+- `GET /api/reports/gst-outward` - GST outward/sales report (Phase 3). Query params: date_from, date_to
+- `GET /api/reports/gst-purchase-register` - GST purchase register for ITC (Phase 3). Query params: date_from, date_to
+
 ## Database Structure
+
+### Migration notes
+- **Legacy naming:** Migration `2024_01_01_000013_add_role_id_to_users_table.php` adds the **phone** column to `users` only. The filename is legacy; do not rename if already deployed.
+- **Duplicate timestamps fixed:** Returns and return_items were previously named `2024_01_01_000011` and `2024_01_01_000012` (duplicates of purchases/purchase_items). They are now `2024_01_01_000014_create_returns_table.php` and `2024_01_01_000015_create_return_items_table.php`. If you had already run the old migrations, ensure your `migrations` table reflects that so these are not run again.
 
 ### Main Tables
 - `users` - System users
@@ -186,6 +230,12 @@ A comprehensive Point of Sale (POS) and Inventory Management System built with L
 - `stock_movements` - Inventory movement history
 - `returns` - Return transactions
 - `return_items` - Return line items
+- `expense_categories` - Expense categories (for reporting)
+- `expenses` - Expense vouchers (date, amount, voucher_number, status, etc.)
+- `day_book_entries` - Day book / journal entries (Phase 2). One row per voucher: system-generated from sales, purchases, returns, expenses (via observers), or manual (journal, opening_balance, payment, receipt). Columns: user_id, entry_date, voucher_number, entry_type, amount, narration, reference_type/reference_id (polymorphic), reconciled_at.
+- `accounts` - Chart of accounts (Phase 3). code, name, type (asset|liability|equity|income|expense), parent_id, opening_balance, is_active.
+- `journal_entries` - Double-entry journal headers (Phase 3). user_id, entry_date, voucher_number, narration, reference_type/reference_id (polymorphic). Created automatically when sales, purchases, returns, expenses are saved (via observers).
+- `journal_entry_lines` - Journal entry lines (Phase 3). journal_entry_id, account_id, debit, credit. Each entry balances (sum debit = sum credit).
 
 ## User Roles & Permissions
 
