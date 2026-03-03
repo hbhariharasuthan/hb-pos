@@ -38,11 +38,9 @@
                 <option value="expense">Expenses</option>
             </select>
             <button @click="loadReport" class="btn btn-primary">Apply Filters</button>
-            <button v-if="reportType !== 'day-book'" @click="exportReport" class="btn btn-secondary">Export</button>
-            <template v-if="reportType === 'day-book'">
-                <button @click="exportDayBook('csv')" class="btn btn-secondary">Export CSV</button>
-                <button @click="exportDayBook('xlsx')" class="btn btn-secondary">Export Excel</button>
-            </template>
+            <button @click="clearFilters" class="btn btn-secondary">Clear Filters</button>
+            <button @click="handleExport" class="btn btn-secondary">Export</button>
+            <span class="filter-hint">Maximum date range for reports and exports is 6 months.</span>
         </div>
 
         <!-- Dashboard Stats Widgets -->
@@ -488,6 +486,31 @@ export default {
 
         const reportHasMore = computed(() => reportPage.value < reportLastPage.value);
 
+        const normalizeDateRange = () => {
+            const from = filters.value.date_from;
+            const to = filters.value.date_to;
+            if (!from || !to) return;
+            if (from > to) {
+                // Swap to ensure from <= to
+                const tmp = filters.value.date_from;
+                filters.value.date_from = filters.value.date_to;
+                filters.value.date_to = tmp;
+            }
+        };
+
+        const isDateRangeTooWide = () => {
+            const from = filters.value.date_from;
+            const to = filters.value.date_to;
+            if (!from || !to) return false;
+            const fromDate = new Date(from);
+            const toDate = new Date(to);
+            if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) return false;
+            const diffMs = Math.abs(toDate.getTime() - fromDate.getTime());
+            const diffDays = diffMs / (1000 * 60 * 60 * 24);
+            // Approximate 6 months as 186 days
+            return diffDays > 186;
+        };
+
         const buildReportParams = (page = 1) => {
             const params = { page, per_page: 15 };
             if (filters.value.date_from) params.date_from = filters.value.date_from;
@@ -498,11 +521,25 @@ export default {
             return params;
         };
 
+        const clearFilters = () => {
+            filters.value.date_from = '';
+            filters.value.date_to = '';
+            reportSearch.value = '';
+            dayBookType.value = '';
+            reportPage.value = 1;
+            loadReport();
+        };
+
         const loadReport = async () => {
             try {
                 if (reportType.value === 'dashboard') {
                     const response = await axios.get('/api/reports/dashboard-stats');
                     dashboardStats.value = response.data;
+                    return;
+                }
+                normalizeDateRange();
+                if (isDateRangeTooWide()) {
+                    handleApiError('Maximum date range for reports is 6 months. Please narrow the dates.');
                     return;
                 }
                 reportLoading.value = true;
@@ -606,9 +643,8 @@ export default {
         };
 
         const exportReport = () => {
-            // Simple CSV export
+            // Simple CSV export based on currently loaded report data
             let csv = '';
-            let data = [];
 
             if (reportType.value === 'products' && productReport.value) {
                 csv = 'Product,SKU,Category,Stock,Cost Price,Value,Status\n';
@@ -655,6 +691,19 @@ export default {
             }
         };
 
+        const handleExport = () => {
+            normalizeDateRange();
+            if (isDateRangeTooWide()) {
+                handleApiError('Maximum date range for exports is 6 months. Please narrow the dates.');
+                return;
+            }
+            if (reportType.value === 'day-book') {
+                exportDayBook('csv');
+            } else {
+                exportReport();
+            }
+        };
+
         const getProductStatus = (product) => {
             if (product.stock_quantity === 0) return 'Out of Stock';
             if (product.stock_quantity <= product.min_stock_level) return 'Low Stock';
@@ -686,6 +735,7 @@ export default {
                 const params = { format };
                 if (filters.value.date_from) params.date_from = filters.value.date_from;
                 if (filters.value.date_to) params.date_to = filters.value.date_to;
+                if (dayBookType.value) params.type = dayBookType.value;
                 const response = await axios.get('/api/reports/day-book/export', {
                     params,
                     responseType: 'blob'
@@ -850,9 +900,11 @@ export default {
             reportHasMore,
             reportScrollContainer,
             loadReport,
+            clearFilters,
             loadMoreReport,
             handleReportScroll,
             exportReport,
+            handleExport,
             reportCgst,
             reportSgst,
             getProductStatus,
@@ -901,6 +953,12 @@ export default {
     gap: 15px;
     margin-bottom: 20px;
     flex-wrap: wrap;
+}
+
+.filter-hint {
+    font-size: 12px;
+    color: #6b7280;
+    align-self: center;
 }
 
 .date-input {
