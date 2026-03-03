@@ -298,7 +298,11 @@ class ReportController extends Controller
     {
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
-        $typeFilter = $request->input('type'); // sale, purchase, return, expense (optional)
+        $typeFilter = $request->query('type');
+        $allowedTypes = ['sale', 'purchase', 'return', 'expense'];
+        if ($typeFilter !== null && $typeFilter !== '' && ! in_array($typeFilter, $allowedTypes, true)) {
+            $typeFilter = null;
+        }
         $perPage = (int) $request->input('per_page', 15);
         $perPage = max(1, min(100, $perPage));
 
@@ -312,16 +316,63 @@ class ReportController extends Controller
             ->groupBy('type')
             ->get();
 
-        // Query for (optional) type filter & pagination
-        $entriesQuery = clone $baseQuery;
+        // Entries: if a specific type is requested, build a focused query for that type;
+        // otherwise use the full union.
         if ($typeFilter) {
-            $entriesQuery->where('type', $typeFilter);
+            switch ($typeFilter) {
+                case 'sale':
+                    $entriesQuery = Sale::query()
+                        ->selectRaw("sale_date as date, invoice_number as ref, 'sale' as type, total as amount, user_id");
+                    if ($dateFrom) {
+                        $entriesQuery->whereDate('sale_date', '>=', $dateFrom);
+                    }
+                    if ($dateTo) {
+                        $entriesQuery->whereDate('sale_date', '<=', $dateTo);
+                    }
+                    break;
+                case 'purchase':
+                    $entriesQuery = Purchase::query()
+                        ->selectRaw("purchase_date as date, bill_number as ref, 'purchase' as type, total as amount, user_id");
+                    if ($dateFrom) {
+                        $entriesQuery->whereDate('purchase_date', '>=', $dateFrom);
+                    }
+                    if ($dateTo) {
+                        $entriesQuery->whereDate('purchase_date', '<=', $dateTo);
+                    }
+                    break;
+                case 'return':
+                    $entriesQuery = ReturnModel::query()
+                        ->selectRaw("return_date as date, return_number as ref, 'return' as type, -refund_amount as amount, user_id");
+                    if ($dateFrom) {
+                        $entriesQuery->whereDate('return_date', '>=', $dateFrom);
+                    }
+                    if ($dateTo) {
+                        $entriesQuery->whereDate('return_date', '<=', $dateTo);
+                    }
+                    break;
+                case 'expense':
+                    $entriesQuery = Expense::query()
+                        ->selectRaw("expense_date as date, voucher_number as ref, 'expense' as type, amount as amount, user_id");
+                    if ($dateFrom) {
+                        $entriesQuery->whereDate('expense_date', '>=', $dateFrom);
+                    }
+                    if ($dateTo) {
+                        $entriesQuery->whereDate('expense_date', '<=', $dateTo);
+                    }
+                    break;
+                default:
+                    $entriesQuery = $this->buildDayBookQuery($dateFrom, $dateTo);
+                    break;
+            }
+        } else {
+            $entriesQuery = $this->buildDayBookQuery($dateFrom, $dateTo);
         }
 
-        $countQuery = clone $entriesQuery;
-        $total = $countQuery->count();
+        $total = (clone $entriesQuery)->count();
         $currentPage = (int) $request->input('page', 1);
         $entries = $entriesQuery
+            ->orderBy('date')
+            ->orderBy('ref')
             ->offset(($currentPage - 1) * $perPage)
             ->limit($perPage)
             ->get();
