@@ -39,7 +39,13 @@
             </select>
             <button @click="loadReport" class="btn btn-primary">Apply Filters</button>
             <button @click="clearFilters" class="btn btn-secondary">Clear Filters</button>
-            <button @click="handleExport" class="btn btn-secondary">Export</button>
+            <button
+                @click="handleExport"
+                class="btn btn-secondary"
+                :disabled="exportInProgress"
+            >
+                {{ exportInProgress ? 'Exporting…' : 'Export' }}
+            </button>
             <span class="filter-hint">Maximum date range for reports and exports is 6 months.</span>
         </div>
 
@@ -455,15 +461,17 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import { useToast } from 'vue-toastification';
 import { handleApiError } from '@/utils/errorHandler';
 
 export default {
     name: 'Reports',
     setup() {
         const route = useRoute();
+        const toast = useToast();
         const reportType = ref('dashboard');
         const dashboardStats = ref(null);
         const productReport = ref(null);
@@ -474,10 +482,14 @@ export default {
         const dayBookReport = ref(null);
         const reportSearch = ref('');
         const reportLoading = ref(false);
+        const exportInProgress = ref(false);
+        const currentExportId = ref(null);
+        const exportStatus = ref(null);
         const reportPage = ref(1);
         const reportLastPage = ref(1);
         const reportScrollContainer = ref(null);
         const dayBookType = ref('');
+        let exportPollTimer = null;
 
         const filters = ref({
             date_from: '',
@@ -642,65 +654,89 @@ export default {
             if (scrollBottom < 100) loadMoreReport();
         };
 
-        const exportReport = () => {
-            // Simple CSV export based on currently loaded report data
-            let csv = '';
+        const getReportTypeSlug = () => reportType.value;
 
-            if (reportType.value === 'products' && productReport.value) {
-                csv = 'Product,SKU,Category,Stock,Cost Price,Value,Status\n';
-                (productReport.value.products || []).filter(p => p != null).forEach(p => {
-                    csv += `"${p.name}","${p.sku}","${p.category?.name || 'N/A'}","${p.stock_quantity}","${p.cost_price}","${(p.stock_quantity * p.cost_price).toFixed(2)}","${getProductStatus(p)}"\n`;
-                });
-            } else if (reportType.value === 'inventory' && inventoryReport.value) {
-                csv = 'Date,Product,Type,Quantity,Unit Cost,User,Notes\n';
-                (inventoryReport.value.movements || []).filter(m => m != null).forEach(m => {
-                    csv += `"${formatDate(m.created_at)}","${m.product?.name || 'N/A'}","${m.type.toUpperCase()}","${m.quantity}","${m.unit_cost || 'N/A'}","${m.user?.name || 'System'}","${(m.notes || '').replace(/"/g, '""')}"\n`;
-                });
-            } else if (reportType.value === 'sales' && salesReport.value) {
-                csv = 'Invoice #,Date,Customer,Items,Subtotal,CGST,SGST,Discount,Total,Payment\n';
-                (salesReport.value.sales || []).filter(s => s != null).forEach(s => {
-                    const cgst = (parseFloat(s.tax_amount) || 0) / 2;
-                    const sgst = (parseFloat(s.tax_amount) || 0) / 2;
-                    csv += `"${s.invoice_number}","${formatDate(s.sale_date)}","${s.customer?.name || 'Walk-in'}","${s.items?.length || 0}","${s.subtotal}","${cgst.toFixed(2)}","${sgst.toFixed(2)}","${s.discount}","${s.total}","${s.payment_method}"\n`;
-                });
-            } else if (reportType.value === 'purchases' && purchaseReport.value) {
-                csv = 'Bill #,Date,Supplier,Items,Subtotal,Tax,Total\n';
-                (purchaseReport.value.purchases || []).filter(p => p != null).forEach(p => {
-                    csv += `"${p.bill_number}","${formatDate(p.purchase_date)}","${p.supplier?.name || '—'}","${p.items?.length || 0}","${p.subtotal}","${p.tax_amount}","${p.total}"\n`;
-                });
-            } else if (reportType.value === 'expenses' && expenseReport.value) {
-                csv = 'Date,Voucher #,Category,Amount,Payment,Status,Reference\n';
-                (expenseReport.value.expenses || []).filter(e => e != null).forEach(e => {
-                    csv += `"${formatDate(e.expense_date)}","${e.voucher_number}","${e.expense_category?.name || '—'}","${e.amount}","${e.payment_method || '—'}","${e.status}","${(e.reference || '').replace(/"/g, '""')}"\n`;
-                });
-            } else if (reportType.value === 'day-book') {
-                return;
+        const startExportPolling = () => {
+            if (!currentExportId.value) return;
+            if (exportPollTimer) {
+                clearInterval(exportPollTimer);
             }
+            exportPollTimer = setInterval(async () => {
+                try {
+                    const { data } = await axios.get(`/api/report-exports/${currentExportId.value}`);
+                    exportStatus.value = data.status;
+                    if (data.status === 'completed') {
+                        clearInterval(exportPollTimer);
+                        exportPollTimer = null;
+                        await downloadExportFile();
+                        exportInProgress.value = false;
+                    } else if (data.status === 'failed') {
+                        clearInterval(exportPollTimer);
+                        exportPollTimer = null;
+                        exportInProgress.value = false;
+                        handleApiError('Export failed. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error checking export status:', error);
+                    clearInterval(exportPollTimer);
+                    exportPollTimer = null;
+                    exportInProgress.value = false;
+                    handleApiError('Error checking export status');
+                }
+            }, 2000);
+        };
 
-            if (csv) {
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
+        const downloadExportFile = async () => {
+            if (!currentExportId.value) return;
+            try {
+                const response = await axios.get(`/api/report-exports/${currentExportId.value}/download`, {
+                    responseType: 'blob'
+                });
+                const filename = `${getReportTypeSlug()}_report_${new Date().toISOString().split('T')[0]}.csv`;
+                const url = window.URL.createObjectURL(new Blob([response.data]));
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${reportType.value}_report_${new Date().toISOString().split('T')[0]}.csv`;
+                a.setAttribute('download', filename);
+                document.body.appendChild(a);
                 a.click();
-                // Clean up
-                setTimeout(() => window.URL.revokeObjectURL(url), 100);
-            } else {
-                handleApiError('No data available to export');
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error downloading export:', error);
+                handleApiError('Error downloading export');
             }
         };
 
-        const handleExport = () => {
+        const handleExport = async () => {
             normalizeDateRange();
             if (isDateRangeTooWide()) {
                 handleApiError('Maximum date range for exports is 6 months. Please narrow the dates.');
                 return;
             }
-            if (reportType.value === 'day-book') {
-                exportDayBook('csv');
-            } else {
-                exportReport();
+            if (exportInProgress.value) return;
+
+            const payload = {
+                report_type: getReportTypeSlug(),
+                format: 'csv',
+                filters: {}
+            };
+            if (filters.value.date_from) payload.filters.date_from = filters.value.date_from;
+            if (filters.value.date_to) payload.filters.date_to = filters.value.date_to;
+            if (reportType.value === 'day-book' && dayBookType.value) {
+                payload.filters.type = dayBookType.value;
+            }
+
+            try {
+                exportInProgress.value = true;
+                exportStatus.value = 'pending';
+                const { data } = await axios.post('/api/report-exports', payload);
+                currentExportId.value = data.id;
+                toast.success('Export started. You will get the file shortly.');
+                startExportPolling();
+            } catch (error) {
+                console.error('Error starting export:', error);
+                exportInProgress.value = false;
+                handleApiError('Error starting export');
             }
         };
 
@@ -876,6 +912,12 @@ export default {
             loadReport();
         });
 
+        onUnmounted(() => {
+            if (exportPollTimer) {
+                clearInterval(exportPollTimer);
+            }
+        });
+
         watch(() => route.query.report, (val) => {
             if (val === 'day-book') {
                 reportType.value = 'day-book';
@@ -903,7 +945,6 @@ export default {
             clearFilters,
             loadMoreReport,
             handleReportScroll,
-            exportReport,
             handleExport,
             reportCgst,
             reportSgst,

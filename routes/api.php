@@ -10,6 +10,7 @@ use App\Http\Controllers\API\SaleController;
 use App\Http\Controllers\API\StockController;
 use App\Http\Controllers\API\ReturnController;
 use App\Http\Controllers\API\ReportController;
+use App\Http\Controllers\API\ReportExportController;
 use App\Http\Controllers\API\PurchaseController;
 use App\Http\Controllers\API\ImportController;
 use App\Http\Controllers\API\GstSlabController;
@@ -104,6 +105,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/balance-sheet', [ReportController::class, 'balanceSheetReport']);
     Route::get('/reports/gst-outward', [ReportController::class, 'gstOutwardReport']);
     Route::get('/reports/gst-purchase-register', [ReportController::class, 'gstPurchaseRegisterReport']);
+
+    // Report exports (queued)
+    Route::post('/report-exports', [ReportExportController::class, 'store']);
+    Route::get('/report-exports/{reportExport}', [ReportExportController::class, 'show']);
+    Route::get('/report-exports/{reportExport}/download', [ReportExportController::class, 'download']);
 
     // Import
     Route::get('/import/sample/{type}', [ImportController::class, 'downloadSample']);
