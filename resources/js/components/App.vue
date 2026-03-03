@@ -23,11 +23,13 @@
                         <router-link to="/brands" @click="mastersOpen = false">Brands</router-link>
                         <router-link to="/gst-slabs" @click="mastersOpen = false">GST Slabs</router-link>
                         <router-link to="/customers" @click="mastersOpen = false">Customers</router-link>
+                        <router-link to="/expense-categories" @click="mastersOpen = false">Expense Categories</router-link>
                     </div>
                 </div>
                 <router-link to="/inventory">Inventory</router-link>
                 <router-link to="/purchases">Purchases</router-link>
                 <router-link to="/sales">Sales</router-link>
+                <router-link to="/expenses">Expenses</router-link>
                 <router-link to="/reports">Reports</router-link>
             </div>
         </nav>

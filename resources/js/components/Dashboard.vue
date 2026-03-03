@@ -99,10 +99,22 @@
                 <p>Purchase orders & bills</p>
             </router-link>
 
+            <router-link to="/expenses" class="dashboard-card">
+                <div class="card-icon">💸</div>
+                <h2>Expenses</h2>
+                <p>Expense vouchers & categories</p>
+            </router-link>
+
             <router-link to="/reports" class="dashboard-card">
                 <div class="card-icon">📈</div>
                 <h2>Reports</h2>
                 <p>View analytics & reports</p>
+            </router-link>
+
+            <router-link to="/reports?report=day-book" class="dashboard-card">
+                <div class="card-icon">📒</div>
+                <h2>Day Book</h2>
+                <p>Chronological transactions report</p>
             </router-link>
         </div>
     </div>

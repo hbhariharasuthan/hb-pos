@@ -17,6 +17,8 @@ import Inventory from './components/Inventory.vue';
 import Purchases from './components/Purchases.vue';
 import PurchaseBill from './components/PurchaseBill.vue';
 import Reports from './components/Reports.vue';
+import ExpenseCategories from './components/ExpenseCategories.vue';
+import Expenses from './components/Expenses.vue';
 import { useAuthStore } from './stores/auth';
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
@@ -38,6 +40,8 @@ const routes = [
     { path: '/purchases', component: Purchases, meta: { requiresAuth: true } },
     { path: '/purchases/:id/bill', component: PurchaseBill, meta: { requiresAuth: true } },
     { path: '/reports', component: Reports, meta: { requiresAuth: true } },
+    { path: '/expense-categories', component: ExpenseCategories, meta: { requiresAuth: true } },
+    { path: '/expenses', component: Expenses, meta: { requiresAuth: true } },
 ];
 
 const router = createRouter({

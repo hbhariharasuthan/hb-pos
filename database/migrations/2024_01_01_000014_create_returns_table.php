@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('returns')) {
+            return;
+        }
+
         Schema::create('returns', function (Blueprint $table) {
             $table->id();
             $table->string('return_number')->unique();

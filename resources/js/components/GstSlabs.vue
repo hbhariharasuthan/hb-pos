@@ -374,5 +374,42 @@ export default {
 .action-bar {
     display: flex;
     gap: 12px;
+    margin-bottom: 16px;
 }
+
+.btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Primary button */
+.btn.primary {
+    background-color: #2563eb; /* blue */
+    color: white;
+}
+
+.btn.primary:hover {
+    background-color: #1d4ed8;
+}
+
+/* Outline button */
+.btn.outline {
+    background: transparent;
+    color: #2563eb;
+    border: 1px solid #2563eb;
+}
+
+.btn.outline:hover {
+    background-color: #2563eb;
+    color: white;
+}
+
 </style>

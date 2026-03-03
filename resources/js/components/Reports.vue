@@ -9,6 +9,8 @@
                     <option value="inventory">Inventory Report</option>
                     <option value="sales">Sales Report</option>
                     <option value="purchases">Purchase Report</option>
+                    <option value="expenses">Expense Report</option>
+                    <option value="day-book">Day Book Report</option>
                 </select>
             </div>
         </div>
@@ -18,13 +20,29 @@
             <input v-model="filters.date_from" type="date" class="date-input" placeholder="From Date" />
             <input v-model="filters.date_to" type="date" class="date-input" placeholder="To Date" />
             <input
+                v-if="reportType !== 'day-book'"
                 v-model="reportSearch"
                 type="text"
                 class="search-input"
                 placeholder="Search in current report..."
             />
+            <select
+                v-if="reportType === 'day-book'"
+                v-model="dayBookType"
+                class="date-input"
+            >
+                <option value="">All Types</option>
+                <option value="sale">Sales</option>
+                <option value="purchase">Purchases</option>
+                <option value="return">Returns</option>
+                <option value="expense">Expenses</option>
+            </select>
             <button @click="loadReport" class="btn btn-primary">Apply Filters</button>
-            <button @click="exportReport" class="btn btn-secondary">Export</button>
+            <button v-if="reportType !== 'day-book'" @click="exportReport" class="btn btn-secondary">Export</button>
+            <template v-if="reportType === 'day-book'">
+                <button @click="exportDayBook('csv')" class="btn btn-secondary">Export CSV</button>
+                <button @click="exportDayBook('xlsx')" class="btn btn-secondary">Export Excel</button>
+            </template>
         </div>
 
         <!-- Dashboard Stats Widgets -->
@@ -340,28 +358,128 @@
                 <div v-if="!reportHasMore && filteredPurchaseRows.length > 0 && reportType === 'purchases'" class="no-more-indicator">No more records</div>
             </div>
         </div>
+
+        <!-- Expense Report -->
+        <div v-if="reportType === 'expenses' && expenseReport" class="report-section">
+            <div class="report-stats">
+                <div class="stat-card">
+                    <h3>Total Expenses</h3>
+                    <p>{{ expenseReport.stats?.total_expenses || 0 }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Amount</h3>
+                    <p>₹{{ (expenseReport.stats?.total_amount || 0).toFixed(2) }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Approved</h3>
+                    <p>{{ expenseReport.stats?.approved_count || 0 }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Pending</h3>
+                    <p>{{ expenseReport.stats?.pending_count || 0 }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Cancelled</h3>
+                    <p>{{ expenseReport.stats?.cancelled_count || 0 }}</p>
+                </div>
+            </div>
+
+            <div ref="reportScrollContainer" class="table-container report-scroll" @scroll="handleReportScroll">
+                <h3>Expense Entries</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Voucher #</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th>Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(exp, idx) in filteredExpenseRows" :key="exp?.id ?? `expense-${idx}`">
+                            <td>{{ formatDate(exp.expense_date) }}</td>
+                            <td>{{ exp.voucher_number }}</td>
+                            <td>{{ exp.expense_category?.name || '—' }}</td>
+                            <td>₹{{ exp.amount }}</td>
+                            <td>{{ exp.payment_method || '—' }}</td>
+                            <td>{{ exp.status }}</td>
+                            <td>{{ exp.reference || '—' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div v-if="reportHasMore && reportType === 'expenses'" class="load-more-trigger">
+                    <div v-if="reportLoading" class="loading-indicator">Loading more...</div>
+                    <div v-else class="load-more-hint">Scroll for more</div>
+                </div>
+                <div v-if="!reportHasMore && filteredExpenseRows.length > 0 && reportType === 'expenses'" class="no-more-indicator">No more records</div>
+            </div>
+        </div>
+
+        <!-- Day Book Report -->
+        <div v-if="reportType === 'day-book' && dayBookReport" class="report-section">
+            <div class="report-stats">
+                <div class="stat-card" v-for="t in dayBookTypes" :key="t.value">
+                    <h3>{{ t.label }}</h3>
+                    <p>₹{{ (dayBookTotals[t.value]?.total_amount || 0).toFixed(2) }}</p>
+                    <p class="widget-label">{{ dayBookTotals[t.value]?.total_entries || 0 }} entries</p>
+                </div>
+            </div>
+            <div ref="reportScrollContainer" class="table-container report-scroll" @scroll="handleReportScroll">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Reference</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(row, idx) in (dayBookReport.entries || [])" :key="idx">
+                            <td>{{ formatDate(row.date) }}</td>
+                            <td>{{ row.ref || '—' }}</td>
+                            <td>{{ row.type || '—' }}</td>
+                            <td>₹{{ Number(row.amount || 0).toFixed(2) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div v-if="reportHasMore && reportType === 'day-book'" class="load-more-trigger">
+                    <div v-if="reportLoading" class="loading-indicator">Loading more...</div>
+                    <div v-else class="load-more-hint">Scroll for more</div>
+                </div>
+                <div v-if="!reportHasMore && (dayBookReport.entries || []).length > 0 && reportType === 'day-book'" class="no-more-indicator">No more records</div>
+            </div>
+        </div>
     </div>
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import axios from 'axios';
 import { handleApiError } from '@/utils/errorHandler';
 
 export default {
     name: 'Reports',
     setup() {
+        const route = useRoute();
         const reportType = ref('dashboard');
         const dashboardStats = ref(null);
         const productReport = ref(null);
         const inventoryReport = ref(null);
         const salesReport = ref(null);
         const purchaseReport = ref(null);
+        const expenseReport = ref(null);
+        const dayBookReport = ref(null);
         const reportSearch = ref('');
         const reportLoading = ref(false);
         const reportPage = ref(1);
         const reportLastPage = ref(1);
         const reportScrollContainer = ref(null);
+        const dayBookType = ref('');
 
         const filters = ref({
             date_from: '',
@@ -374,6 +492,9 @@ export default {
             const params = { page, per_page: 15 };
             if (filters.value.date_from) params.date_from = filters.value.date_from;
             if (filters.value.date_to) params.date_to = filters.value.date_to;
+            if (reportType.value === 'day-book' && dayBookType.value) {
+                params.type = dayBookType.value;
+            }
             return params;
         };
 
@@ -384,6 +505,7 @@ export default {
                     dashboardStats.value = response.data;
                     return;
                 }
+                reportLoading.value = true;
                 reportPage.value = 1;
                 const params = buildReportParams(1);
                 if (reportType.value === 'products') {
@@ -406,10 +528,22 @@ export default {
                     const d = response.data;
                     purchaseReport.value = { stats: d.stats, purchases: d.purchases || [] };
                     reportLastPage.value = d.last_page ?? 1;
+                } else if (reportType.value === 'expenses') {
+                    const response = await axios.get('/api/reports/expenses', { params });
+                    const d = response.data;
+                    expenseReport.value = { stats: d.stats, expenses: d.expenses || [] };
+                    reportLastPage.value = d.last_page ?? 1;
+                } else if (reportType.value === 'day-book') {
+                    const response = await axios.get('/api/reports/day-book', { params });
+                    const d = response.data;
+                    dayBookReport.value = { stats: d.stats || {}, entries: d.entries || [] };
+                    reportLastPage.value = d.last_page ?? 1;
                 }
             } catch (error) {
                 console.error('Error loading report:', error);
                 handleApiError('Error loading report');
+            } finally {
+                reportLoading.value = false;
             }
         };
 
@@ -442,6 +576,18 @@ export default {
                     const d = response.data;
                     if (purchaseReport.value && d.purchases?.length) {
                         purchaseReport.value.purchases = [...(purchaseReport.value.purchases || []), ...d.purchases];
+                    }
+                } else if (reportType.value === 'expenses') {
+                    const response = await axios.get('/api/reports/expenses', { params });
+                    const d = response.data;
+                    if (expenseReport.value && d.expenses?.length) {
+                        expenseReport.value.expenses = [...(expenseReport.value.expenses || []), ...d.expenses];
+                    }
+                } else if (reportType.value === 'day-book') {
+                    const response = await axios.get('/api/reports/day-book', { params });
+                    const d = response.data;
+                    if (dayBookReport.value && d.entries?.length) {
+                        dayBookReport.value.entries = [...(dayBookReport.value.entries || []), ...d.entries];
                     }
                 }
                 reportPage.value = nextPage;
@@ -486,6 +632,13 @@ export default {
                 (purchaseReport.value.purchases || []).filter(p => p != null).forEach(p => {
                     csv += `"${p.bill_number}","${formatDate(p.purchase_date)}","${p.supplier?.name || '—'}","${p.items?.length || 0}","${p.subtotal}","${p.tax_amount}","${p.total}"\n`;
                 });
+            } else if (reportType.value === 'expenses' && expenseReport.value) {
+                csv = 'Date,Voucher #,Category,Amount,Payment,Status,Reference\n';
+                (expenseReport.value.expenses || []).filter(e => e != null).forEach(e => {
+                    csv += `"${formatDate(e.expense_date)}","${e.voucher_number}","${e.expense_category?.name || '—'}","${e.amount}","${e.payment_method || '—'}","${e.status}","${(e.reference || '').replace(/"/g, '""')}"\n`;
+                });
+            } else if (reportType.value === 'day-book') {
+                return;
             }
 
             if (csv) {
@@ -525,7 +678,31 @@ export default {
         };
 
         const formatDate = (date) => {
-            return new Date(date).toLocaleDateString();
+            return date ? new Date(date).toLocaleDateString() : '';
+        };
+
+        const exportDayBook = async (format) => {
+            try {
+                const params = { format };
+                if (filters.value.date_from) params.date_from = filters.value.date_from;
+                if (filters.value.date_to) params.date_to = filters.value.date_to;
+                const response = await axios.get('/api/reports/day-book/export', {
+                    params,
+                    responseType: 'blob'
+                });
+                const ext = format === 'xlsx' ? 'xlsx' : 'csv';
+                const filename = `day-book-${new Date().toISOString().slice(0, 10)}.${ext}`;
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const a = document.createElement('a');
+                a.href = url;
+                a.setAttribute('download', filename);
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                handleApiError(error);
+            }
         };
 
         const reportCgst = (sale) => (parseFloat(sale?.tax_amount) || 0) / 2;
@@ -606,17 +783,67 @@ export default {
             });
         });
 
+        const dayBookTypes = [
+            { value: 'sale', label: 'Sales' },
+            { value: 'purchase', label: 'Purchases' },
+            { value: 'return', label: 'Returns' },
+            { value: 'expense', label: 'Expenses' }
+        ];
+
+        const dayBookTotals = computed(() => {
+            const rows = dayBookReport.value?.stats?.totals_by_type || [];
+            const map = {};
+            rows.forEach((r) => {
+                const key = r.type;
+                if (!map[key]) {
+                    map[key] = { total_amount: 0, total_entries: 0 };
+                }
+                map[key].total_amount = Number(r.total_amount || 0);
+                map[key].total_entries = Number(r.total_entries || 0);
+            });
+            return map;
+        });
+
+        const filteredExpenseRows = computed(() => {
+            const rows = (expenseReport.value?.expenses || []).filter(e => e != null && e.id != null);
+            const term = (reportSearch.value || '').trim().toLowerCase();
+            if (!term) return rows;
+            return rows.filter((e) => {
+                return (
+                    normalizedIncludes(e.voucher_number, term) ||
+                    normalizedIncludes(e.expense_category?.name, term) ||
+                    normalizedIncludes(e.payment_method, term) ||
+                    normalizedIncludes(e.status, term) ||
+                    normalizedIncludes(e.amount, term)
+                );
+            });
+        });
+
         onMounted(() => {
+            if (route.query.report === 'day-book') {
+                reportType.value = 'day-book';
+            }
             loadReport();
+        });
+
+        watch(() => route.query.report, (val) => {
+            if (val === 'day-book') {
+                reportType.value = 'day-book';
+                loadReport();
+            }
         });
 
         return {
             reportType,
+            dayBookReport,
+            exportDayBook,
             dashboardStats,
             productReport,
             inventoryReport,
             salesReport,
             purchaseReport,
+            dayBookType,
+            expenseReport,
             filters,
             reportSearch,
             reportLoading,
@@ -636,7 +863,10 @@ export default {
             filteredProductRows,
             filteredInventoryMovements,
             filteredSalesRows,
-            filteredPurchaseRows
+            filteredPurchaseRows,
+            filteredExpenseRows,
+            dayBookTypes,
+            dayBookTotals
         };
     }
 };
@@ -762,7 +992,7 @@ export default {
 
 .stat-card p {
     margin: 0;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: bold;
     color: #667eea;
 }

@@ -120,4 +120,14 @@ return [
         ],
     ],
 
+    'expense_categories' => [
+        'headers' => ['name', 'code', 'description', 'is_active'],
+        'rows' => [
+            ['Rent', 'RENT', 'Office or shop rent', 1],
+            ['Utilities', 'UTIL', 'Electricity, water, etc.', 1],
+            ['Salaries', 'SAL', 'Staff salaries and wages', 1],
+            ['Miscellaneous', 'MISC', 'Other expenses', 1],
+        ],
+    ],
+
 ];

@@ -89,6 +89,9 @@ class DatabaseSeeder extends Seeder
         // Seed products using ProductSeeder (500 electrical products)
         $this->call(ProductSeeder::class);
 
+        // Seed expense categories
+        $this->call(ExpenseCategorySeeder::class);
+
         // Create Sample Customers (use firstOrCreate to avoid duplicates)
         $customers = [
             ['name' => 'John Doe', 'email' => 'john@example.com', 'phone' => '555-0101'],

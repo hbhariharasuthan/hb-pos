@@ -8,6 +8,7 @@ use App\Services\ImportService;
 use App\Imports\BrandImport;
 use App\Imports\CategoryImport;
 use App\Imports\CustomerImport;
+use App\Imports\ExpenseCategoryImport;
 use App\Imports\GstSlabImport;
 use App\Imports\ProductImport;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -34,6 +35,7 @@ class ImportController extends Controller
             'categories' => CategoryImport::class,
             'customers' => CustomerImport::class,
             'gst_slabs' => GstSlabImport::class,
+            'expense_categories' => ExpenseCategoryImport::class,
             default => null
         };
 

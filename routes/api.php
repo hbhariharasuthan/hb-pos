@@ -13,6 +13,10 @@ use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\PurchaseController;
 use App\Http\Controllers\API\ImportController;
 use App\Http\Controllers\API\GstSlabController;
+use App\Http\Controllers\API\ExpenseCategoryController;
+use App\Http\Controllers\API\ExpenseController;
+use App\Http\Controllers\API\DayBookEntryController;
+use App\Http\Controllers\API\AccountController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -71,12 +75,35 @@ Route::middleware('auth:sanctum')->group(function () {
     // Returns
     Route::apiResource('returns', ReturnController::class);
 
+    // Expense categories
+    Route::get('/expense-categories/all', [ExpenseCategoryController::class, 'index'])->name('expense-categories.all');
+    Route::apiResource('expense-categories', ExpenseCategoryController::class);
+
+    // Expenses
+    Route::apiResource('expenses', ExpenseController::class);
+
+    // Day book entries (Phase 2: journal layer; list all, manual journal/opening_balance/payment/receipt)
+    Route::post('/day-book-entries/{id}/reconcile', [DayBookEntryController::class, 'reconcile'])->name('day-book-entries.reconcile');
+    Route::apiResource('day-book-entries', DayBookEntryController::class);
+
+    // Chart of accounts (Phase 3)
+    Route::apiResource('accounts', AccountController::class);
+
     // Reports
     Route::get('/reports/dashboard-stats', [ReportController::class, 'dashboardStats']);
     Route::get('/reports/products', [ReportController::class, 'productReport']);
     Route::get('/reports/inventory', [ReportController::class, 'inventoryReport']);
     Route::get('/reports/sales', [ReportController::class, 'salesReport']);
     Route::get('/reports/purchases', [ReportController::class, 'purchaseReport']);
+    Route::get('/reports/expenses', [ReportController::class, 'expenseReport']);
+    Route::get('/reports/day-book', [ReportController::class, 'dayBookReport']);
+    Route::get('/reports/day-book/export', [ReportController::class, 'dayBookExport']);
+    Route::get('/reports/ledger', [ReportController::class, 'ledgerReport']);
+    Route::get('/reports/trial-balance', [ReportController::class, 'trialBalanceReport']);
+    Route::get('/reports/profit-loss', [ReportController::class, 'profitLossReport']);
+    Route::get('/reports/balance-sheet', [ReportController::class, 'balanceSheetReport']);
+    Route::get('/reports/gst-outward', [ReportController::class, 'gstOutwardReport']);
+    Route::get('/reports/gst-purchase-register', [ReportController::class, 'gstPurchaseRegisterReport']);
 
     // Import
     Route::get('/import/sample/{type}', [ImportController::class, 'downloadSample']);
