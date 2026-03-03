@@ -135,10 +135,8 @@ export default {
         const stats = ref(null);
         
         const formatCurrency = (value) => {
-            if (value === null || value === undefined || isNaN(value)) {
-                return '0.00';
-            }
-            return parseFloat(value).toFixed(2);
+            if (value === null || value === undefined || isNaN(value)) return '0.00';
+            return parseFloat(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
 
         const loadStats = async () => {

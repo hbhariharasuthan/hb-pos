@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Account;
+use App\Models\Customer;
 use App\Models\Expense;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
@@ -833,6 +834,35 @@ class ReportController extends Controller
         $todaySales = Sale::whereDate('sale_date', today())->get();
         $monthSales = Sale::where('sale_date', '>=', $thisMonth)->get();
 
+        // Purchase stats (today & this month)
+        $todayPurchases = Purchase::whereDate('purchase_date', today())->get();
+        $monthPurchases = Purchase::where('purchase_date', '>=', $thisMonth)->get();
+
+        // Expense stats (today & this month; exclude cancelled)
+        $todayExpenses = Expense::whereDate('expense_date', today())->whereNotIn('status', ['cancelled'])->get();
+        $monthExpenses = Expense::where('expense_date', '>=', $thisMonth)->whereNotIn('status', ['cancelled'])->get();
+
+        // Day book summary for today (sales, purchases, returns, expenses)
+        $dayBookToday = [
+            'sale' => (float) Sale::whereDate('sale_date', today())->sum('total'),
+            'purchase' => (float) Purchase::whereDate('purchase_date', today())->sum('total'),
+            'return' => (float) ReturnModel::whereDate('return_date', today())->sum('refund_amount'),
+            'expense' => (float) Expense::whereDate('expense_date', today())->whereNotIn('status', ['cancelled'])->sum('amount'),
+        ];
+        $dayBookTodayCount = [
+            'sale' => Sale::whereDate('sale_date', today())->count(),
+            'purchase' => Purchase::whereDate('purchase_date', today())->count(),
+            'return' => ReturnModel::whereDate('return_date', today())->count(),
+            'expense' => Expense::whereDate('expense_date', today())->whereNotIn('status', ['cancelled'])->count(),
+        ];
+
+        // Credit-based: credit sales (today & month) and outstanding customer balance
+        $creditSalesToday = (float) Sale::whereDate('sale_date', today())->where('payment_method', 'credit')->sum('total');
+        $creditSalesMonth = (float) Sale::where('sale_date', '>=', $thisMonth)->where('payment_method', 'credit')->sum('total');
+        $creditSalesTodayCount = Sale::whereDate('sale_date', today())->where('payment_method', 'credit')->count();
+        $creditSalesMonthCount = Sale::where('sale_date', '>=', $thisMonth)->where('payment_method', 'credit')->count();
+        $outstandingBalance = (float) Customer::where('is_active', true)->where('balance', '>', 0)->sum('balance');
+
         // Product stats
         $totalProducts = Product::where('is_active', true)->count();
         $lowStockProducts = Product::whereRaw('stock_quantity <= min_stock_level')
@@ -842,7 +872,7 @@ class ReportController extends Controller
         // Inventory value
         $inventoryValue = Product::where('is_active', true)
             ->get()
-            ->sum(function($product) {
+            ->sum(function ($product) {
                 return $product->stock_quantity * $product->cost_price;
             });
 
@@ -852,6 +882,29 @@ class ReportController extends Controller
                 'today_count' => $todaySales->count(),
                 'month_revenue' => (float) $monthSales->sum('total'),
                 'month_count' => $monthSales->count(),
+            ],
+            'purchases' => [
+                'today_amount' => (float) $todayPurchases->sum('total'),
+                'today_count' => $todayPurchases->count(),
+                'month_amount' => (float) $monthPurchases->sum('total'),
+                'month_count' => $monthPurchases->count(),
+            ],
+            'expenses' => [
+                'today_amount' => (float) $todayExpenses->sum('amount'),
+                'today_count' => $todayExpenses->count(),
+                'month_amount' => (float) $monthExpenses->sum('amount'),
+                'month_count' => $monthExpenses->count(),
+            ],
+            'day_book' => [
+                'today' => $dayBookToday,
+                'today_count' => $dayBookTodayCount,
+            ],
+            'credit' => [
+                'credit_sales_today' => $creditSalesToday,
+                'credit_sales_today_count' => $creditSalesTodayCount,
+                'credit_sales_month' => $creditSalesMonth,
+                'credit_sales_month_count' => $creditSalesMonthCount,
+                'outstanding_balance' => $outstandingBalance,
             ],
             'products' => [
                 'total' => $totalProducts,

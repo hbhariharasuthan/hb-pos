@@ -48,7 +48,7 @@ class ExpenseController extends Controller
     {
         try {
             $validated = $request->validate([
-                'expense_category_id' => 'nullable|exists:expense_categories,id',
+                'expense_category_id' => 'required|exists:expense_categories,id',
                 'voucher_number' => 'nullable|string|max:255',
                 'amount' => 'required|numeric|min:0',
                 'expense_date' => 'required|date',

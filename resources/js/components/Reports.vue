@@ -55,17 +55,17 @@
                 <div class="widget-icon">💰</div>
                 <div class="widget-content">
                     <h3>Today's Sales</h3>
-                    <p class="widget-value">₹{{ dashboardStats.sales.today_revenue.toFixed(2) }}</p>
-                    <p class="widget-label">{{ dashboardStats.sales.today_count }} transactions</p>
+                    <p class="widget-value">₹{{ formatCurrency(dashboardStats.sales?.today_revenue ?? 0) }}</p>
+                    <p class="widget-label">{{ dashboardStats.sales?.today_count ?? 0 }} transactions</p>
                 </div>
             </div>
 
             <div class="stat-widget">
                 <div class="widget-icon">📊</div>
                 <div class="widget-content">
-                    <h3>This Month</h3>
-                    <p class="widget-value">₹{{ dashboardStats.sales.month_revenue.toFixed(2) }}</p>
-                    <p class="widget-label">{{ dashboardStats.sales.month_count }} transactions</p>
+                    <h3>Sales This Month</h3>
+                    <p class="widget-value">₹{{ formatCurrency(dashboardStats.sales?.month_revenue ?? 0) }}</p>
+                    <p class="widget-label">{{ dashboardStats.sales?.month_count ?? 0 }} transactions</p>
                 </div>
             </div>
 
@@ -73,8 +73,8 @@
                 <div class="widget-icon">📦</div>
                 <div class="widget-content">
                     <h3>Products</h3>
-                    <p class="widget-value">{{ dashboardStats.products.total }}</p>
-                    <p class="widget-label">{{ dashboardStats.products.low_stock }} low stock</p>
+                    <p class="widget-value">{{ dashboardStats.products?.total ?? 0 }}</p>
+                    <p class="widget-label">{{ dashboardStats.products?.low_stock ?? 0 }} low stock</p>
                 </div>
             </div>
 
@@ -82,8 +82,102 @@
                 <div class="widget-icon">💵</div>
                 <div class="widget-content">
                     <h3>Inventory Value</h3>
-                    <p class="widget-value">₹{{ dashboardStats.inventory.total_value.toFixed(2) }}</p>
+                    <p class="widget-value">₹{{ formatCurrency(dashboardStats.inventory?.total_value ?? 0) }}</p>
                     <p class="widget-label">Total stock value</p>
+                </div>
+            </div>
+
+            <!-- Purchase -->
+            <div v-if="dashboardStats.purchases" class="stat-widget">
+                <div class="widget-icon">🛒</div>
+                <div class="widget-content">
+                    <h3>Today's Purchases</h3>
+                    <p class="widget-value">₹{{ formatCurrency(dashboardStats.purchases.today_amount ?? 0) }}</p>
+                    <p class="widget-label">{{ dashboardStats.purchases.today_count ?? 0 }} bills</p>
+                </div>
+            </div>
+            <div v-if="dashboardStats.purchases" class="stat-widget">
+                <div class="widget-icon">📋</div>
+                <div class="widget-content">
+                    <h3>Purchases This Month</h3>
+                    <p class="widget-value">₹{{ formatCurrency(dashboardStats.purchases.month_amount ?? 0) }}</p>
+                    <p class="widget-label">{{ dashboardStats.purchases.month_count ?? 0 }} bills</p>
+                </div>
+            </div>
+
+            <!-- Expense -->
+            <div v-if="dashboardStats.expenses" class="stat-widget">
+                <div class="widget-icon">🧾</div>
+                <div class="widget-content">
+                    <h3>Today's Expenses</h3>
+                    <p class="widget-value">₹{{ formatCurrency(dashboardStats.expenses.today_amount ?? 0) }}</p>
+                    <p class="widget-label">{{ dashboardStats.expenses.today_count ?? 0 }} entries</p>
+                </div>
+            </div>
+            <div v-if="dashboardStats.expenses" class="stat-widget">
+                <div class="widget-icon">📉</div>
+                <div class="widget-content">
+                    <h3>Expenses This Month</h3>
+                    <p class="widget-value">₹{{ formatCurrency(dashboardStats.expenses.month_amount ?? 0) }}</p>
+                    <p class="widget-label">{{ dashboardStats.expenses.month_count ?? 0 }} entries</p>
+                </div>
+            </div>
+
+            <!-- Day Book (today summary) -->
+            <div v-if="dashboardStats.day_book?.today" class="stat-widget day-book-widget">
+                <div class="widget-icon">📒</div>
+                <div class="widget-content">
+                    <h3>Day Book – Today</h3>
+                    <table class="day-book-table">
+                        <tbody>
+                            <tr>
+                                <td class="day-book-label">Sales</td>
+                                <td class="day-book-amount">₹{{ formatCurrency(dashboardStats.day_book.today?.sale ?? 0) }}</td>
+                                <td class="day-book-count">{{ dashboardStats.day_book.today_count?.sale ?? 0 }} {{ (dashboardStats.day_book.today_count?.sale ?? 0) === 1 ? 'entry' : 'entries' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="day-book-label">Purchases</td>
+                                <td class="day-book-amount">₹{{ formatCurrency(dashboardStats.day_book.today?.purchase ?? 0) }}</td>
+                                <td class="day-book-count">{{ dashboardStats.day_book.today_count?.purchase ?? 0 }} {{ (dashboardStats.day_book.today_count?.purchase ?? 0) === 1 ? 'bill' : 'bills' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="day-book-label">Returns</td>
+                                <td class="day-book-amount">₹{{ formatCurrency(dashboardStats.day_book.today?.return ?? 0) }}</td>
+                                <td class="day-book-count">{{ dashboardStats.day_book.today_count?.return ?? 0 }} {{ (dashboardStats.day_book.today_count?.return ?? 0) === 1 ? 'entry' : 'entries' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="day-book-label">Expenses</td>
+                                <td class="day-book-amount">₹{{ formatCurrency(dashboardStats.day_book.today?.expense ?? 0) }}</td>
+                                <td class="day-book-count">{{ dashboardStats.day_book.today_count?.expense ?? 0 }} {{ (dashboardStats.day_book.today_count?.expense ?? 0) === 1 ? 'entry' : 'entries' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Credit -->
+            <div v-if="dashboardStats.credit" class="stat-widget">
+                <div class="widget-icon">💳</div>
+                <div class="widget-content">
+                    <h3>Credit Sales Today</h3>
+                    <p class="widget-value">₹{{ formatCurrency(dashboardStats.credit.credit_sales_today ?? 0) }}</p>
+                    <p class="widget-label">{{ dashboardStats.credit.credit_sales_today_count ?? 0 }} transactions</p>
+                </div>
+            </div>
+            <div v-if="dashboardStats.credit" class="stat-widget">
+                <div class="widget-icon">📅</div>
+                <div class="widget-content">
+                    <h3>Credit Sales This Month</h3>
+                    <p class="widget-value">₹{{ formatCurrency(dashboardStats.credit.credit_sales_month ?? 0) }}</p>
+                    <p class="widget-label">{{ dashboardStats.credit.credit_sales_month_count ?? 0 }} transactions</p>
+                </div>
+            </div>
+            <div v-if="dashboardStats.credit && (dashboardStats.credit.outstanding_balance ?? 0) > 0" class="stat-widget">
+                <div class="widget-icon">⚠️</div>
+                <div class="widget-content">
+                    <h3>Outstanding (Credit)</h3>
+                    <p class="widget-value">₹{{ formatCurrency(dashboardStats.credit.outstanding_balance ?? 0) }}</p>
+                    <p class="widget-label">Customer balance due</p>
                 </div>
             </div>
         </div>
@@ -766,6 +860,13 @@ export default {
             return date ? new Date(date).toLocaleDateString() : '';
         };
 
+        /** Format amount with Indian grouping (e.g. 60,55,55,109.61) so large values stay readable and don't overflow. */
+        const formatCurrency = (value) => {
+            if (value === null || value === undefined || isNaN(value)) return '0.00';
+            const n = parseFloat(value);
+            return n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
         const exportDayBook = async (format) => {
             try {
                 const params = { format };
@@ -952,6 +1053,7 @@ export default {
             getProductStatusClass,
             getMovementTypeClass,
             formatDate,
+            formatCurrency,
             formatReportQty,
             filteredProductRows,
             filteredInventoryMovements,
@@ -1030,6 +1132,7 @@ export default {
     display: flex;
     align-items: center;
     gap: 20px;
+    min-width: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: all 0.3s;
 }
@@ -1041,6 +1144,11 @@ export default {
 
 .widget-icon {
     font-size: 48px;
+    flex-shrink: 0;
+}
+
+.widget-content {
+    min-width: 0;
 }
 
 .widget-content h3 {
@@ -1055,12 +1163,49 @@ export default {
     font-size: 28px;
     font-weight: bold;
     color: #333;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: break-word;
+    word-break: break-all;
 }
 
 .widget-label {
     margin: 0;
     font-size: 12px;
     color: #999;
+}
+
+.day-book-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+.day-book-table td {
+    padding: 6px 0;
+    vertical-align: middle;
+}
+
+.day-book-table tr:not(:last-child) td {
+    border-bottom: 1px solid #eee;
+}
+
+.day-book-label {
+    color: #444;
+    font-weight: 600;
+    width: 100px;
+}
+
+.day-book-amount {
+    color: #333;
+    font-variant-numeric: tabular-nums;
+    padding-right: 12px;
+}
+
+.day-book-count {
+    color: #666;
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .report-section {
