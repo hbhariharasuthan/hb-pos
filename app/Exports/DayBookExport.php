@@ -42,11 +42,11 @@ class DayBookExport implements FromCollection, WithHeadings, WithMapping
 
     public function headings(): array
     {
-        return ['Date', 'Reference', 'Type', 'Amount', 'User ID'];
+        return ['Date', 'Reference', 'Type', 'Amount', 'User Name'];
     }
 
     /**
-     * @param object $row { date, ref, type, amount, user_id }
+     * @param object $row { date, ref, type, amount, user_id, user_name } — user_name set by ReportController::getDayBookChunk
      */
     public function map($row): array
     {
@@ -55,7 +55,7 @@ class DayBookExport implements FromCollection, WithHeadings, WithMapping
             $row->ref ?? '',
             $row->type ?? '',
             (float) ($row->amount ?? 0),
-            $row->user_id ?? '',
+            $row->user_name ?? '',
         ];
     }
 }

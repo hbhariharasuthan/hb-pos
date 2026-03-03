@@ -12,6 +12,7 @@ use App\Models\Purchase;
 use App\Models\ReturnModel;
 use App\Models\Sale;
 use App\Models\StockMovement;
+use App\Models\User;
 use App\Exports\DayBookExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -428,20 +429,22 @@ class ReportController extends Controller
         return new StreamedResponse(function () use ($dateFrom, $dateTo) {
             $handle = fopen('php://output', 'w');
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
-            fputcsv($handle, ['Date', 'Reference', 'Type', 'Amount', 'User ID']);
+            fputcsv($handle, ['Date', 'Reference', 'Type', 'Amount', 'User Name']);
 
             $offset = 0;
             $chunkSize = self::DAY_BOOK_CHUNK_SIZE;
             do {
                 $query = $this->buildDayBookQuery($dateFrom, $dateTo);
                 $rows = $query->offset($offset)->limit($chunkSize)->get();
+                $userIds = $rows->pluck('user_id')->filter()->unique();
+                $userNames = User::whereIn('id', $userIds)->pluck('name', 'id');
                 foreach ($rows as $row) {
                     fputcsv($handle, [
                         $row->date ?? '',
                         $row->ref ?? '',
                         $row->type ?? '',
                         $row->amount ?? 0,
-                        $row->user_id ?? '',
+                        $row->user_id ? ($userNames[$row->user_id] ?? $row->user_id) : '',
                     ]);
                 }
                 $offset += $chunkSize;
@@ -453,10 +456,17 @@ class ReportController extends Controller
 
     /**
      * Fetch one chunk of day book rows (for Excel export). Used by DayBookExport.
+     * Each row includes user_name (resolved from user_id) for export display.
      */
     public function getDayBookChunk(?string $dateFrom, ?string $dateTo, int $limit, int $offset)
     {
-        return $this->buildDayBookQuery($dateFrom, $dateTo)->offset($offset)->limit($limit)->get();
+        $rows = $this->buildDayBookQuery($dateFrom, $dateTo)->offset($offset)->limit($limit)->get();
+        $userIds = $rows->pluck('user_id')->filter()->unique()->values()->all();
+        $userNames = $userIds ? User::whereIn('id', $userIds)->pluck('name', 'id') : collect();
+        foreach ($rows as $row) {
+            $row->user_name = $row->user_id ? ($userNames[$row->user_id] ?? (string) $row->user_id) : '';
+        }
+        return $rows;
     }
 
     /**
