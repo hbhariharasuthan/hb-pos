@@ -13,11 +13,15 @@ class ReturnJournalObserver
 
     public function created(ReturnModel $return): void
     {
+        if ($return->status !== 'approved') {
+            return;
+        }
         $this->posting->postReturn($return);
     }
 
     public function updated(ReturnModel $return): void
     {
+        // updateReturn unposts then re-posts unless status is cancelled
         $this->posting->updateReturn($return);
     }
 

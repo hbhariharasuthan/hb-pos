@@ -12,6 +12,7 @@ use App\Http\Controllers\API\ReturnController;
 use App\Http\Controllers\API\ReportController;
 use App\Http\Controllers\API\ReportExportController;
 use App\Http\Controllers\API\PurchaseController;
+use App\Http\Controllers\API\PurchaseReturnController;
 use App\Http\Controllers\API\ImportController;
 use App\Http\Controllers\API\GstSlabController;
 use App\Http\Controllers\API\ExpenseCategoryController;
@@ -76,11 +77,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // Returns
     Route::apiResource('returns', ReturnController::class);
 
+    // Purchase returns
+    Route::apiResource('purchase-returns', PurchaseReturnController::class);
+
     // Expense categories
     Route::get('/expense-categories/all', [ExpenseCategoryController::class, 'index'])->name('expense-categories.all');
     Route::apiResource('expense-categories', ExpenseCategoryController::class);
 
     // Expenses
+    Route::post('/expenses/{expense}/refund', [ExpenseController::class, 'refund']);
     Route::apiResource('expenses', ExpenseController::class);
 
     // Day book entries (Phase 2: journal layer; list all, manual journal/opening_balance/payment/receipt)

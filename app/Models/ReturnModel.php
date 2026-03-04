@@ -12,7 +12,7 @@ class ReturnModel extends Model
 
     protected $fillable = [
         'return_number', 'sale_id', 'customer_id', 'user_id',
-        'return_date', 'reason', 'notes', 'refund_amount', 'status'
+        'return_date', 'reason', 'notes', 'refund_amount', 'refund_method', 'refund_reference', 'status'
     ];
 
     protected $casts = [

@@ -39,6 +39,9 @@ class SaleController extends Controller
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
+        } else {
+            // By default, hide fully refunded sales from listings
+            $query->where('status', '!=', 'refunded');
         }
 
         $perPage = $request->input('per_page', 10);

@@ -9,6 +9,10 @@ class ExpenseDayBookObserver
 {
     public function created(Expense $expense): void
     {
+        if ($expense->status !== 'approved') {
+            return;
+        }
+
         DayBookEntry::create([
             'user_id' => $expense->user_id,
             'entry_date' => $expense->expense_date,
@@ -26,6 +30,21 @@ class ExpenseDayBookObserver
         $entry = DayBookEntry::where('reference_type', Expense::class)
             ->where('reference_id', $expense->id)
             ->first();
+
+        if ($expense->status === 'cancelled') {
+            if ($entry) {
+                $entry->delete();
+            }
+            return;
+        }
+
+        if ($expense->status !== 'approved') {
+            // Pending or other statuses should not have an automatic day book entry
+            if ($entry) {
+                $entry->delete();
+            }
+            return;
+        }
 
         if ($entry) {
             $entry->update([

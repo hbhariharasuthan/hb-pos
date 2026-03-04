@@ -2,6 +2,7 @@
     <div class="purchase-bill-container">
         <div class="bill-actions">
             <button @click="goBack" class="btn btn-secondary">Back</button>
+            <router-link v-if="purchase?.id" :to="'/purchase-returns?purchase_id=' + purchase.id" class="btn btn-secondary">Return to supplier</router-link>
             <button @click="printBill" class="btn btn-primary">Print Bill</button>
         </div>
 

@@ -29,6 +29,20 @@
                 <router-link to="/inventory">Inventory</router-link>
                 <router-link to="/purchases">Purchases</router-link>
                 <router-link to="/sales">Sales</router-link>
+                <div class="nav-dropdown" ref="returnsDropdownRef">
+                    <button
+                        type="button"
+                        class="nav-dropdown-trigger"
+                        :class="{ open: returnsOpen }"
+                        @click="returnsOpen = !returnsOpen"
+                    >
+                        Returns <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div v-if="returnsOpen" class="nav-dropdown-menu" @click.stop>
+                        <router-link to="/returns" @click="returnsOpen = false">Sales Return</router-link>
+                        <router-link to="/purchase-returns" @click="returnsOpen = false">Purchase Return</router-link>
+                    </div>
+                </div>
                 <router-link to="/expenses">Expenses</router-link>
                 <router-link to="/reports">Reports</router-link>
             </div>
@@ -54,18 +68,23 @@ export default {
         const client = useClientInfo();
         const mastersOpen = ref(false);
         const mastersDropdownRef = ref(null);
+        const returnsOpen = ref(false);
+        const returnsDropdownRef = ref(null);
 
-        const closeMastersOnClickOutside = (e) => {
+        const closeDropdownsOnClickOutside = (e) => {
             if (mastersDropdownRef.value && !mastersDropdownRef.value.contains(e.target)) {
                 mastersOpen.value = false;
+            }
+            if (returnsDropdownRef.value && !returnsDropdownRef.value.contains(e.target)) {
+                returnsOpen.value = false;
             }
         };
 
         onMounted(() => {
-            document.addEventListener('click', closeMastersOnClickOutside);
+            document.addEventListener('click', closeDropdownsOnClickOutside);
         });
         onUnmounted(() => {
-            document.removeEventListener('click', closeMastersOnClickOutside);
+            document.removeEventListener('click', closeDropdownsOnClickOutside);
         });
 
         return {
@@ -74,6 +93,8 @@ export default {
             client,
             mastersOpen,
             mastersDropdownRef,
+            returnsOpen,
+            returnsDropdownRef,
         };
     },
     async mounted() {
@@ -184,7 +205,8 @@ body {
 }
 
 .nav-dropdown-trigger:hover,
-.nav-dropdown-trigger.open {
+.nav-dropdown-trigger.open,
+.nav-dropdown:has(.nav-dropdown-menu a.router-link-active) .nav-dropdown-trigger {
     background: #667eea;
     color: white;
 }

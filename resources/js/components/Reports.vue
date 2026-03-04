@@ -35,6 +35,7 @@
                 <option value="sale">Sales</option>
                 <option value="purchase">Purchases</option>
                 <option value="return">Returns</option>
+                <option value="purchase_return">Purchase returns</option>
                 <option value="expense">Expenses</option>
             </select>
             <button @click="loadReport" class="btn btn-primary">Apply Filters</button>
@@ -144,6 +145,11 @@
                                 <td class="day-book-label">Returns</td>
                                 <td class="day-book-amount">₹{{ formatCurrency(dashboardStats.day_book.today?.return ?? 0) }}</td>
                                 <td class="day-book-count">{{ dashboardStats.day_book.today_count?.return ?? 0 }} {{ (dashboardStats.day_book.today_count?.return ?? 0) === 1 ? 'entry' : 'entries' }}</td>
+                            </tr>
+                            <tr v-if="dashboardStats.day_book?.today">
+                                <td class="day-book-label">Purchase returns</td>
+                                <td class="day-book-amount">₹{{ formatCurrency(dashboardStats.day_book.today?.purchase_return ?? 0) }}</td>
+                                <td class="day-book-count">{{ dashboardStats.day_book.today_count?.purchase_return ?? 0 }} {{ (dashboardStats.day_book.today_count?.purchase_return ?? 0) === 1 ? 'entry' : 'entries' }}</td>
                             </tr>
                             <tr>
                                 <td class="day-book-label">Expenses</td>
@@ -974,6 +980,7 @@ export default {
             { value: 'sale', label: 'Sales' },
             { value: 'purchase', label: 'Purchases' },
             { value: 'return', label: 'Returns' },
+            { value: 'purchase_return', label: 'Purchase returns' },
             { value: 'expense', label: 'Expenses' }
         ];
 

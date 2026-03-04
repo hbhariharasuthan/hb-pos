@@ -10,6 +10,7 @@ use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Models\Product;
 use App\Models\Purchase;
+use App\Models\PurchaseReturn;
 use App\Models\ReturnModel;
 use App\Models\Sale;
 use App\Models\StockMovement;
@@ -25,25 +26,30 @@ class ReportController extends Controller
     protected const DAY_BOOK_CHUNK_SIZE = 2000;
 
     /**
-     * Build the day book union query (sales, purchases, returns, expenses) with optional date filter.
+     * Build the day book union query (sales, purchases, returns, purchase_returns, expenses) with optional date filter.
+     * Only approved (non-cancelled) returns and purchase returns are included.
      */
     protected function buildDayBookQuery(?string $dateFrom, ?string $dateTo)
     {
-        // Use literal type labels instead of bound parameters to avoid
-        // parameter-mismatch issues in the UNION subquery.
         $salesQuery = Sale::query()
             ->selectRaw("sale_date as date, invoice_number as ref, 'sale' as type, total as amount, user_id");
         $purchasesQuery = Purchase::query()
             ->selectRaw("purchase_date as date, bill_number as ref, 'purchase' as type, total as amount, user_id");
         $returnsQuery = ReturnModel::query()
+            ->where('status', 'approved')
             ->selectRaw("return_date as date, return_number as ref, 'return' as type, -refund_amount as amount, user_id");
+        $purchaseReturnsQuery = PurchaseReturn::query()
+            ->where('status', 'approved')
+            ->selectRaw("return_date as date, purchase_return_number as ref, 'purchase_return' as type, return_amount as amount, user_id");
         $expensesQuery = Expense::query()
+            ->whereNotIn('status', ['cancelled'])
             ->selectRaw("expense_date as date, voucher_number as ref, 'expense' as type, amount as amount, user_id");
 
         if ($dateFrom) {
             $salesQuery->whereDate('sale_date', '>=', $dateFrom);
             $purchasesQuery->whereDate('purchase_date', '>=', $dateFrom);
             $returnsQuery->whereDate('return_date', '>=', $dateFrom);
+            $purchaseReturnsQuery->whereDate('return_date', '>=', $dateFrom);
             $expensesQuery->whereDate('expense_date', '>=', $dateFrom);
         }
 
@@ -51,12 +57,14 @@ class ReportController extends Controller
             $salesQuery->whereDate('sale_date', '<=', $dateTo);
             $purchasesQuery->whereDate('purchase_date', '<=', $dateTo);
             $returnsQuery->whereDate('return_date', '<=', $dateTo);
+            $purchaseReturnsQuery->whereDate('return_date', '<=', $dateTo);
             $expensesQuery->whereDate('expense_date', '<=', $dateTo);
         }
 
         $union = $salesQuery
             ->unionAll($purchasesQuery)
             ->unionAll($returnsQuery)
+            ->unionAll($purchaseReturnsQuery)
             ->unionAll($expensesQuery);
 
         return DB::table(DB::raw("({$union->toSql()}) as day_book"))
@@ -135,6 +143,7 @@ class ReportController extends Controller
             'purchases' => (clone $baseQuery)->where('type', 'purchase')->sum('quantity'),
             'sales' => abs((clone $baseQuery)->where('type', 'sale')->sum('quantity')),
             'returns' => (clone $baseQuery)->where('type', 'return')->sum('quantity'),
+            'purchase_returns' => abs((clone $baseQuery)->where('type', 'purchase_return')->sum('quantity')),
             'adjustments' => (clone $baseQuery)->where('type', 'adjustment')->sum('quantity'),
             'total_value' => (float) (clone $baseQuery)->where('type', 'purchase')->get()->sum(fn ($m) => $m->quantity * ($m->unit_cost ?? 0)),
         ];
@@ -153,7 +162,8 @@ class ReportController extends Controller
 
     public function salesReport(Request $request)
     {
-        $query = Sale::with(['customer', 'user', 'items.product.brand']);
+        $query = Sale::with(['customer', 'user', 'items.product.brand'])
+            ->where('status', '!=', 'refunded');
 
         if ($request->has('date_from')) {
             $query->whereDate('sale_date', '>=', $request->date_from);
@@ -227,7 +237,8 @@ class ReportController extends Controller
 
     public function purchaseReport(Request $request)
     {
-        $query = Purchase::with(['supplier', 'items.product']);
+        $query = Purchase::with(['supplier', 'items.product'])
+            ->where('status', '!=', 'returned');
 
         if ($request->has('date_from')) {
             $query->whereDate('purchase_date', '>=', $request->date_from);
@@ -301,7 +312,7 @@ class ReportController extends Controller
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
         $typeFilter = $request->query('type');
-        $allowedTypes = ['sale', 'purchase', 'return', 'expense'];
+        $allowedTypes = ['sale', 'purchase', 'return', 'purchase_return', 'expense'];
         if ($typeFilter !== null && $typeFilter !== '' && ! in_array($typeFilter, $allowedTypes, true)) {
             $typeFilter = null;
         }
@@ -344,6 +355,7 @@ class ReportController extends Controller
                     break;
                 case 'return':
                     $entriesQuery = ReturnModel::query()
+                        ->where('status', 'approved')
                         ->selectRaw("return_date as date, return_number as ref, 'return' as type, -refund_amount as amount, user_id");
                     if ($dateFrom) {
                         $entriesQuery->whereDate('return_date', '>=', $dateFrom);
@@ -354,12 +366,24 @@ class ReportController extends Controller
                     break;
                 case 'expense':
                     $entriesQuery = Expense::query()
+                        ->whereNotIn('status', ['cancelled'])
                         ->selectRaw("expense_date as date, voucher_number as ref, 'expense' as type, amount as amount, user_id");
                     if ($dateFrom) {
                         $entriesQuery->whereDate('expense_date', '>=', $dateFrom);
                     }
                     if ($dateTo) {
                         $entriesQuery->whereDate('expense_date', '<=', $dateTo);
+                    }
+                    break;
+                case 'purchase_return':
+                    $entriesQuery = PurchaseReturn::query()
+                        ->where('status', 'approved')
+                        ->selectRaw("return_date as date, purchase_return_number as ref, 'purchase_return' as type, return_amount as amount, user_id");
+                    if ($dateFrom) {
+                        $entriesQuery->whereDate('return_date', '>=', $dateFrom);
+                    }
+                    if ($dateTo) {
+                        $entriesQuery->whereDate('return_date', '<=', $dateTo);
                     }
                     break;
                 default:
@@ -834,25 +858,31 @@ class ReportController extends Controller
         $todaySales = Sale::whereDate('sale_date', today())->get();
         $monthSales = Sale::where('sale_date', '>=', $thisMonth)->get();
 
-        // Purchase stats (today & this month)
-        $todayPurchases = Purchase::whereDate('purchase_date', today())->get();
-        $monthPurchases = Purchase::where('purchase_date', '>=', $thisMonth)->get();
+        // Purchase stats (today & this month) - exclude fully returned bills
+        $todayPurchases = Purchase::whereDate('purchase_date', today())
+            ->where('status', '!=', 'returned')
+            ->get();
+        $monthPurchases = Purchase::where('purchase_date', '>=', $thisMonth)
+            ->where('status', '!=', 'returned')
+            ->get();
 
         // Expense stats (today & this month; exclude cancelled)
         $todayExpenses = Expense::whereDate('expense_date', today())->whereNotIn('status', ['cancelled'])->get();
         $monthExpenses = Expense::where('expense_date', '>=', $thisMonth)->whereNotIn('status', ['cancelled'])->get();
 
-        // Day book summary for today (sales, purchases, returns, expenses)
+        // Day book summary for today (sales, purchases, returns, purchase_returns, expenses)
         $dayBookToday = [
             'sale' => (float) Sale::whereDate('sale_date', today())->sum('total'),
             'purchase' => (float) Purchase::whereDate('purchase_date', today())->sum('total'),
-            'return' => (float) ReturnModel::whereDate('return_date', today())->sum('refund_amount'),
+            'return' => (float) ReturnModel::whereDate('return_date', today())->where('status', 'approved')->sum('refund_amount'),
+            'purchase_return' => (float) PurchaseReturn::whereDate('return_date', today())->where('status', 'approved')->sum('return_amount'),
             'expense' => (float) Expense::whereDate('expense_date', today())->whereNotIn('status', ['cancelled'])->sum('amount'),
         ];
         $dayBookTodayCount = [
             'sale' => Sale::whereDate('sale_date', today())->count(),
             'purchase' => Purchase::whereDate('purchase_date', today())->count(),
-            'return' => ReturnModel::whereDate('return_date', today())->count(),
+            'return' => ReturnModel::whereDate('return_date', today())->where('status', 'approved')->count(),
+            'purchase_return' => PurchaseReturn::whereDate('return_date', today())->where('status', 'approved')->count(),
             'expense' => Expense::whereDate('expense_date', today())->whereNotIn('status', ['cancelled'])->count(),
         ];
 

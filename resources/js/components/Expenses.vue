@@ -40,6 +40,13 @@
                         <td><span :class="getStatusClass(exp.status)">{{ exp.status }}</span></td>
                         <td>
                             <button @click="editExpense(exp)" class="btn-sm btn-primary">Edit</button>
+                            <button
+                                v-if="exp.status === 'approved'"
+                                @click="refundExpense(exp)"
+                                class="btn-sm btn-secondary"
+                            >
+                                Refund
+                            </button>
                             <button @click="deleteExpense(exp.id)" class="btn-sm btn-danger">Delete</button>
                         </td>
                     </tr>
@@ -213,6 +220,17 @@ export default {
             }
         };
 
+        const refundExpense = async (exp) => {
+            if (!confirm('Mark this expense as refunded and create a receipt entry?')) return;
+            try {
+                await axios.post(`/api/expenses/${exp.id}/refund`);
+                loadInitial();
+                toast.success('Expense refunded successfully');
+            } catch (error) {
+                handleApiError(error);
+            }
+        };
+
         const resetForm = () => {
             form.value = {
                 expense_category_id: null,
@@ -275,6 +293,7 @@ export default {
             editExpense,
             saveExpense,
             deleteExpense,
+            refundExpense,
             formatDate,
             getStatusClass
         };

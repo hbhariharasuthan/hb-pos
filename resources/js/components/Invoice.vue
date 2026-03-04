@@ -2,6 +2,7 @@
     <div class="invoice-container">
         <div class="invoice-actions">
             <button @click="goBack" class="btn btn-secondary">Back</button>
+            <router-link v-if="sale?.id" :to="'/returns?sale_id=' + sale.id" class="btn btn-secondary">Return items</router-link>
             <button @click="printThermalReceipt" class="btn btn-primary">Print Thermal Receipt</button>
             <button @click="printInvoice" class="btn btn-secondary">Print Invoice</button>
         </div>

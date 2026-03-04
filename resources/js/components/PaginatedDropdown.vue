@@ -221,6 +221,23 @@ export default {
             { immediate: true }
         );
 
+        // When items load after an id is already selected, sync the display label
+        watch(
+            () => items.value,
+            (list) => {
+                const val = props.modelValue;
+                if (!val || typeof val === 'object') return;
+                if (!list || !list.length) return;
+                // Only update if we don't already have a label shown
+                if (localSearch.value) return;
+                const found = list.find(i => i[props.valueKey] === val);
+                if (found) {
+                    localSearch.value = getLabel(found);
+                }
+            },
+            { deep: true }
+        );
+
         // Auto-select when only one option (form dropdowns without "All" option)
         watch(
             () => ({ list: validItems.value, loading: loading.value }),

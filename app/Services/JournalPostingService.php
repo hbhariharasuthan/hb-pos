@@ -151,12 +151,18 @@ class JournalPostingService
     public function updateReturn(ReturnModel $return): void
     {
         $this->unpost($return);
+        if ($return->status === 'cancelled') {
+            return;
+        }
         $this->postReturn($return);
     }
 
     public function updateExpense(Expense $expense): void
     {
         $this->unpost($expense);
+        if ($expense->status === 'cancelled') {
+            return;
+        }
         $this->postExpense($expense);
     }
 }

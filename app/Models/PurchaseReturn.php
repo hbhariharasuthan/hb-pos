@@ -6,21 +6,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Purchase extends Model
+class PurchaseReturn extends Model
 {
+    protected $table = 'purchase_returns';
+
     protected $fillable = [
-        'bill_number', 'supplier_id', 'user_id', 'purchase_date',
-        'subtotal', 'tax_rate', 'tax_amount', 'discount', 'total', 'status', 'notes'
+        'purchase_return_number', 'purchase_id', 'supplier_id', 'user_id',
+        'return_date', 'reason', 'notes', 'return_amount', 'status',
     ];
 
     protected $casts = [
-        'purchase_date' => 'date',
-        'subtotal' => 'decimal:2',
-        'tax_rate' => 'decimal:2',
-        'tax_amount' => 'decimal:2',
-        'discount' => 'decimal:2',
-        'total' => 'decimal:2',
+        'return_date' => 'date',
+        'return_amount' => 'decimal:2',
     ];
+
+    public function purchase(): BelongsTo
+    {
+        return $this->belongsTo(Purchase::class);
+    }
 
     public function supplier(): BelongsTo
     {
@@ -34,31 +37,26 @@ class Purchase extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(PurchaseItem::class);
-    }
-
-    public function purchaseReturns(): HasMany
-    {
-        return $this->hasMany(PurchaseReturn::class, 'purchase_id');
+        return $this->hasMany(PurchaseReturnItem::class, 'purchase_return_id');
     }
 
     protected static function boot()
     {
         parent::boot();
 
-        static::creating(function ($purchase) {
-            if (empty($purchase->bill_number)) {
-                $purchase->bill_number = static::generateBillNumber();
+        static::creating(function ($purchaseReturn) {
+            if (empty($purchaseReturn->purchase_return_number)) {
+                $purchaseReturn->purchase_return_number = static::generateReturnNumber();
             }
         });
     }
 
-    public static function generateBillNumber(): string
+    public static function generateReturnNumber(): string
     {
-        $prefix = 'PUR-';
+        $prefix = 'PRET-';
         $date = date('Ymd');
         $last = static::whereDate('created_at', today())->latest()->first();
-        if ($last && preg_match('/\d+$/', $last->bill_number, $m)) {
+        if ($last && preg_match('/\d+$/', $last->purchase_return_number, $m)) {
             $number = (int) $m[0] + 1;
         } else {
             $number = 1;

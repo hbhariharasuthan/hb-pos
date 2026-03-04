@@ -27,6 +27,13 @@ class PurchaseController extends Controller
             $query->whereDate('purchase_date', '<=', $request->date_to);
         }
 
+        // By default, hide fully returned purchases unless status filter explicitly requested
+        if (! $request->has('status')) {
+            $query->where('status', '!=', 'returned');
+        } else {
+            $query->where('status', $request->status);
+        }
+
         $perPage = $request->input('per_page', 10);
         return response()->json($query->orderBy('purchase_date', 'desc')->paginate($perPage));
     }
@@ -89,6 +96,7 @@ class PurchaseController extends Controller
                 'tax_amount' => $taxAmount,
                 'discount' => $discount,
                 'total' => $total,
+                'status' => 'completed',
                 'notes' => $validated['notes'] ?? null,
             ]);
 

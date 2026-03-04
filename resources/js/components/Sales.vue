@@ -42,6 +42,7 @@
                         </td>
                         <td>
                             <button @click="viewInvoice(sale.id)" class="btn-sm btn-primary">View Invoice</button>
+                            <router-link :to="'/returns?sale_id=' + sale.id" class="btn-sm btn-secondary" style="margin-left:4px;">Return</router-link>
                         </td>
                     </tr>
                 </tbody>

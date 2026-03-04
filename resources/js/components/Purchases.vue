@@ -42,6 +42,7 @@
                         <td>₹{{ p.total }}</td>
                         <td>
                             <button @click="viewBill(p.id)" class="btn-sm btn-primary">View Bill</button>
+                            <router-link :to="'/purchase-returns?purchase_id=' + p.id" class="btn-sm btn-secondary" style="margin-left:4px;">Return</router-link>
                         </td>
                     </tr>
                 </tbody>

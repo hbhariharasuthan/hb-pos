@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\DayBookEntry;
 use App\Models\Expense;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ExpenseController extends Controller
@@ -90,7 +92,7 @@ class ExpenseController extends Controller
                 'expense_date' => 'sometimes|date',
                 'payment_method' => 'nullable|string|in:cash,card,credit,mixed',
                 'reference' => 'nullable|string|max:255',
-                'status' => 'nullable|string|max:255',
+                'status' => 'nullable|string|in:pending,approved,cancelled',
                 'notes' => 'nullable|string',
             ]);
 
@@ -111,5 +113,54 @@ class ExpenseController extends Controller
         $expense->delete();
 
         return response()->json(['message' => 'Expense deleted successfully']);
+    }
+
+    /**
+     * Mark an approved expense as refunded/cancelled and create a receipt entry.
+     */
+    public function refund(Request $request, $id)
+    {
+        $expense = Expense::findOrFail($id);
+        if ($expense->status === 'cancelled') {
+            return response()->json([
+                'message' => 'Expense is already cancelled.',
+                'expense' => $expense->load(['user', 'expenseCategory']),
+            ], 200);
+        }
+
+        if ($expense->status !== 'approved') {
+            return response()->json([
+                'message' => 'Only approved expenses can be refunded.',
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $expense->update(['status' => 'cancelled']);
+
+            DayBookEntry::create([
+                'user_id' => $request->user()->id,
+                'entry_date' => now()->toDateString(),
+                'voucher_number' => DayBookEntry::generateVoucherNumber('RCP'),
+                'entry_type' => DayBookEntry::TYPE_RECEIPT,
+                'amount' => (float) $expense->amount,
+                'narration' => 'Expense refund for ' . $expense->voucher_number,
+                'reference_type' => Expense::class,
+                'reference_id' => $expense->id,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Expense refunded and marked as cancelled.',
+                'expense' => $expense->fresh()->load(['user', 'expenseCategory']),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to refund expense.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

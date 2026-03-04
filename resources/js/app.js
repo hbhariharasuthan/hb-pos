@@ -17,6 +17,8 @@ import Inventory from './components/Inventory.vue';
 import Purchases from './components/Purchases.vue';
 import PurchaseBill from './components/PurchaseBill.vue';
 import Reports from './components/Reports.vue';
+import Returns from './components/Returns.vue';
+import PurchaseReturns from './components/PurchaseReturns.vue';
 import ExpenseCategories from './components/ExpenseCategories.vue';
 import Expenses from './components/Expenses.vue';
 import { useAuthStore } from './stores/auth';
@@ -40,6 +42,8 @@ const routes = [
     { path: '/purchases', component: Purchases, meta: { requiresAuth: true } },
     { path: '/purchases/:id/bill', component: PurchaseBill, meta: { requiresAuth: true } },
     { path: '/reports', component: Reports, meta: { requiresAuth: true } },
+    { path: '/returns', component: Returns, meta: { requiresAuth: true } },
+    { path: '/purchase-returns', component: PurchaseReturns, meta: { requiresAuth: true } },
     { path: '/expense-categories', component: ExpenseCategories, meta: { requiresAuth: true } },
     { path: '/expenses', component: Expenses, meta: { requiresAuth: true } },
 ];
