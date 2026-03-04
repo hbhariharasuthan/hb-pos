@@ -49,7 +49,24 @@
                         <tr v-for="item in (sale?.items || []).filter(i => i != null && i.id != null)" :key="item.id">
                             <td>{{ item.product?.name }}</td>
                             <td>{{ item.product?.gst_slab?.hsn_code || '—' }}</td>
-                            <td>{{ formatItemQty(item.quantity, item.product?.unit) }} {{ item.product?.unit || 'pcs' }}</td>
+                            <td>
+                                <div>
+                                    {{ formatItemQty(item.quantity, item.product?.unit) }} {{ item.product?.unit || 'pcs' }}
+                                </div>
+                                <div
+                                    v-if="returnedQtyForItem(item.id) > 0"
+                                    class="returned-info"
+                                >
+                                    Returned:
+                                    {{ formatItemQty(returnedQtyForItem(item.id), item.product?.unit) }}
+                                    {{ item.product?.unit || 'pcs' }}
+                                    <span v-if="item.quantity - returnedQtyForItem(item.id) >= 0">
+                                        · Net:
+                                        {{ formatItemQty(item.quantity - returnedQtyForItem(item.id), item.product?.unit) }}
+                                        {{ item.product?.unit || 'pcs' }}
+                                    </span>
+                                </div>
+                            </td>
                             <td>₹{{ item.unit_price }}</td>
                             <td>{{ item.tax_rate ?? item.product?.gst_slab?.gst_percent ?? 0 }}%</td>
                             <td>₹{{ item.discount }}</td>
@@ -138,6 +155,21 @@ export default {
             const isWeight = ['kg', 'g', 'gm', 'ltr'].includes(u);
             if (isWeight) return Number(n) === parseInt(n, 10) ? n : parseFloat(n).toFixed(2);
             return parseInt(n, 10);
+        };
+
+        const returnedQtyForItem = (saleItemId) => {
+            const s = sale.value;
+            if (!s || !Array.isArray(s.returns)) return 0;
+            let total = 0;
+            s.returns.forEach((ret) => {
+                if (!ret || ret.status === 'cancelled') return;
+                (ret.items || []).forEach((ri) => {
+                    if (ri && ri.sale_item_id === saleItemId) {
+                        total += Number(ri.quantity || 0);
+                    }
+                });
+            });
+            return total;
         };
 
         const printThermalReceipt = () => {
@@ -275,6 +307,7 @@ export default {
             sale,
             formatDate,
             formatItemQty,
+            returnedQtyForItem,
             printInvoice,
             printThermalReceipt,
             goBack,
@@ -367,6 +400,12 @@ export default {
 .invoice-table td {
     padding: 12px;
     border-bottom: 1px solid #e0e0e0;
+}
+
+.returned-info {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #b91c1c;
 }
 
 .invoice-summary {

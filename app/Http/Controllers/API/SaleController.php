@@ -57,7 +57,12 @@ class SaleController extends Controller
 
     public function getInvoice($id)
     {
-        $sale = Sale::with(['customer', 'user', 'items.product.gstSlab'])->findOrFail($id);
+        $sale = Sale::with([
+                'customer',
+                'user',
+                'items.product.gstSlab',
+                'returns.items',
+            ])->findOrFail($id);
         return response()->json($sale);
     }
 }
